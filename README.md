@@ -1,4 +1,4 @@
-# IRB Knowledge Interface Backend
+# IRB Key Information Summary Backend
 
 A FastAPI-based backend service that processes and analyzes Informed Consent documents for human subjects research. The service uses advanced language models and embeddings to generate clear, understandable summaries of complex research consent documents.
 
@@ -44,12 +44,6 @@ export OPENAI_API_KEY='your-api-key'
 - `POST /uploadfile/`: Upload and process PDF documents
 - Accepts: PDF file upload
 - Returns: JSON object containing sectioned summaries of the document
-
-### Items (Example Endpoint)
-- `GET /items/{item_id}`: Example endpoint demonstrating parameter handling
-- Parameters:
-  - `item_id`: Integer
-  - `q`: Optional query string
 
 ## Technical Architecture
 
