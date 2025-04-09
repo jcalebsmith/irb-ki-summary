@@ -1,5 +1,6 @@
 import os
-api_key = os.getenv("OPENAI_API_KEY")
+# Remove the old API key retrieval
+# api_key = os.getenv("OPENAI_API_KEY")
 
 import concurrent.futures
 import json
@@ -8,9 +9,14 @@ import re
 from sys import argv
 from typing import Dict, List, Tuple
 
+# Import Azure specific classes
+from llama_index.llms.azure_openai import AzureOpenAI as AzureOpenAILLM
+from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
+# Keep original OpenAI LLM import for type hinting if needed, or remove if unused elsewhere
+# from llama_index.llms.openai import OpenAI as OpenAILLM
 from llama_index.core.postprocessor import LLMRerank
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.llms.openai import OpenAI as OpenAILLM
+# Remove original OpenAI Embedding import
+# from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core.llms import ChatMessage
 from llama_index.core.node_parser import HierarchicalNodeParser, get_leaf_nodes
 from llama_index.core.query_engine import RetrieverQueryEngine
@@ -21,11 +27,39 @@ from llama_index.core import Settings, StorageContext, VectorStoreIndex
 from .pdf import PDFPages, read_pdf
 from .messages_dictionary import messages_dict
 
-# Initialize embedding model and LLM
-embed_model = OpenAIEmbedding(model="text-embedding-3-large")
-llm = OpenAILLM(api_key=api_key, model="gpt-4o", temperature=0, top_p=0.0)
+# --- Azure OpenAI Configuration ---
+azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+api_key = os.getenv("AZURE_OPENAI_API_KEY") # Use Azure key
+api_version = os.getenv("OPENAI_API_VERSION")
+llm_deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_LLM")
+embed_deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_EMBED")
 
-# Set global settings
+# Model names can sometimes be specified or inferred from deployment
+llm_model_name = "gpt-4o"
+embed_model_name = "text-embedding-3-large"
+
+# Initialize Azure embedding model and LLM
+embed_model = AzureOpenAIEmbedding(
+    model=embed_model_name,
+    deployment_name=embed_deployment_name,
+    api_key=api_key,
+    azure_endpoint=azure_endpoint,
+    api_version=api_version,
+)
+
+llm = AzureOpenAILLM(
+    model=llm_model_name,
+    deployment_name=llm_deployment_name,
+    api_key=api_key,
+    azure_endpoint=azure_endpoint,
+    api_version=api_version,
+    temperature=0,
+    top_p=0.0,
+)
+# --- End Azure OpenAI Configuration ---
+
+
+# Set global settings (no change here, just uses the new instances)
 Settings.llm = llm
 Settings.embed_model = embed_model
 
