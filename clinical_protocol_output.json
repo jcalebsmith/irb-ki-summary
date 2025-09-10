@@ -1,0 +1,202 @@
+{
+  "content": "INVESTIGATIONAL DEVICE EXEMPTION (IDE) PROTOCOL\nTEST CLINICAL STUDY FOR DEVICE\nIDE Number: PENDING\nProtocol Number: TEST-001-2024\n\n## 1. PROTOCOL SUMMARY\n\n### Study Title\nTest Clinical Study for Device\n\n### Sponsor\nTest Sponsor Corporation\n\n\n### Protocol Number\nTEST-001-2024\n\n### Study Phase\nPhase 3\n\n### Regulatory Classification\nDevice\n\n## 2. STUDY OBJECTIVES\n\n### Primary Objective\nTo evaluate the safety and efficacy of the investigational product.\n\n### Primary Endpoint\nPrimary efficacy endpoint at 12 months\n\n### Secondary Objectives\nTo be determined based on study design.\n\n## 3. STUDY DESIGN\n\n### Design Type\nRandomized\n\n### Study Duration\nTo be determined\n\n### Number of Subjects\n100 subjects will be enrolled\n\n### Study Population\nAdults meeting inclusion/exclusion criteria\n\n## 4. INVESTIGATIONAL PRODUCT\n\n\n## 5. ELIGIBILITY CRITERIA\n\n### Inclusion Criteria\nAdults aged 18-75 with confirmed diagnosis\n\n### Exclusion Criteria\nPregnant women, severe comorbidities\n\n## 6. STUDY PROCEDURES\n\n### Screening\nScreening will occur within 30 days prior to enrollment.\n\n### Treatment Period\nTreatment procedures will be conducted according to the protocol schedule.\n\n### Follow-up\nSubjects will be followed for safety and efficacy endpoints.\n\n## 7. SAFETY MONITORING\n\n### Safety Parameters\nSafety will be assessed through adverse event monitoring, laboratory tests, and vital signs.\n\n### Data Safety Monitoring Board (DSMB)\nAn independent DSMB will review safety data periodically.\n\n### Stopping Rules\nThe study may be stopped for safety concerns as determined by the DSMB.\n\n## 8. STATISTICAL CONSIDERATIONS\n\n### Sample Size Calculation\nSample size of 100 provides adequate power for the primary endpoint.\n\n### Statistical Analysis Plan\nPrimary analysis will be conducted on the intent-to-treat population.\n\n### Interim Analysis\nNo interim analysis is planned.\n\n## 9. ETHICAL CONSIDERATIONS\n\n### IRB Review\nThis protocol will be reviewed and approved by the Institutional Review Board prior to study initiation.\n\n### Informed Consent\nAll subjects will provide written informed consent prior to any study procedures.\n\n### Risk-Benefit Assessment\nThe potential benefits of the study outweigh the risks to participants.\n\n## 10. REGULATORY REQUIREMENTS\n\n\n### Good Clinical Practice\nThis study will be conducted in accordance with ICH GCP guidelines and applicable regulations.\n\n## 11. REFERENCES\n\n1. ICH E6(R2) Good Clinical Practice Guidelines\n2. FDA Guidance Documents\n3. Sponsor Protocol Development Guidelines\n\n---\n*Version: 1.0*\n*Date: DRAFT*\n\n\n## DEVICE-SPECIFIC SECTIONS\n\n### A. DEVICE DESCRIPTION AND SPECIFICATIONS\n\n#### Device Name\nTest Medical Device\n\n#### Device Classification\nClass III\n\n#### Intended Use\nThe device is intended for...\n\n#### Device Components\nThe investigational device consists of...\n\n#### Mechanism of Action\nThe device functions by...\n\n### B. PRECLINICAL TESTING\n\n#### Bench Testing\nBench testing has demonstrated...\n\n#### Animal Studies\nPreclinical animal studies showed...\n\n#### Biocompatibility\nBiocompatibility testing per ISO 10993...\n\n### C. MANUFACTURING INFORMATION\n\n#### Manufacturing Site\nTo be provided\n\n#### Quality System\nManufactured under 21 CFR 820 Quality System Regulation\n\n#### Sterilization Method\nEthylene oxide sterilization\n\n### D. DEVICE ACCOUNTABILITY\n\n#### Device Tracking\nAll investigational devices will be tracked using unique serial numbers.\n\n#### Device Storage\nStore at controlled room temperature (20-25\u00b0C)\n\n#### Device Disposition\nAll devices will be returned to sponsor or destroyed per protocol\n\n### E. TRAINING REQUIREMENTS\n\n#### Investigator Training\nAll investigators must complete device-specific training prior to first subject enrollment\n\n#### Procedure Requirements\nDevice implantation/use must be performed by qualified physicians\n\n### F. DEVICE-RELATED ADVERSE EVENTS\n\n#### Anticipated Device-Related Events\n- Device malfunction\n- Device migration\n- Device-related infection\n\n#### Unanticipated Adverse Device Effects (UADE) Reporting\nUADEs will be reported to FDA within 10 working days of sponsor awareness.\n\n### G. DEVICE DEFICIENCIES AND RECALLS\n\n#### Device Deficiency Reporting\nAny device deficiencies will be documented and reported per 21 CFR 812.\n\n#### Recall Procedures\nIn the event of a device recall, all sites will be notified immediately\n\n\n",
+  "validation_results": {
+    "passed": true,
+    "issues": [],
+    "warnings": [
+      "Very short sentence fragment",
+      "Sentence starting with lowercase"
+    ],
+    "info": [
+      "High paragraph length variability: CV=53.6%"
+    ],
+    "consistency_metrics": {
+      "runs_analyzed": 1,
+      "insufficient_data": true
+    },
+    "content_analysis": {
+      "word_count": 604,
+      "character_count": 4329,
+      "critical_value_preservation": 1.0,
+      "paragraph_cv": 53.56158578475393,
+      "sentence_count": 47
+    }
+  },
+  "metadata": {
+    "plugin_id": "clinical-protocol",
+    "template_used": "clinical-protocol/device-ide.j2",
+    "document_type": "clinical-protocol",
+    "chunking_method": "SPLICE",
+    "agents_used": 5,
+    "workflow_steps": {
+      "template_selection": {
+        "name": "Step 1: Template Selection",
+        "completed": true,
+        "status": "Completed",
+        "start_time": 1757511273.998094,
+        "end_time": 1757511273.9981015,
+        "metadata": {
+          "selected_template": "clinical-protocol/device-ide.j2",
+          "regulatory_section": "Device"
+        }
+      },
+      "key_value_entry": {
+        "name": "Step 2: Key Value Entry",
+        "completed": true,
+        "status": "Completed",
+        "start_time": 1757511273.9981015,
+        "end_time": 1757511273.9981046,
+        "metadata": {
+          "fields_provided": 5,
+          "missing_fields": []
+        }
+      },
+      "sub_template_selection": {
+        "name": "Step 3: Sub-template Selection",
+        "completed": true,
+        "status": "Completed",
+        "start_time": 1757511273.9981046,
+        "end_time": 1757511273.9981053,
+        "metadata": {
+          "sub_templates_selected": 5,
+          "sub_template_ids": [
+            "ide",
+            "device-specific",
+            "fda-device",
+            "cardiac-endpoints",
+            "cardiovascular-safety"
+          ]
+        }
+      },
+      "value_propagation": {
+        "name": "Step 4: Value Propagation",
+        "completed": true,
+        "status": "Completed",
+        "start_time": 1757511273.9981053,
+        "end_time": 1757511273.9981086,
+        "metadata": {
+          "values_propagated": 3,
+          "propagated_fields": [
+            "study_name",
+            "sponsor_name",
+            "device_name"
+          ]
+        }
+      },
+      "llm_rewording": {
+        "name": "Step 5: LLM Rewording",
+        "completed": true,
+        "status": "Ready for LLM processing",
+        "start_time": 1757511273.9981089,
+        "end_time": 1757511273.998109,
+        "metadata": {
+          "enabled": true,
+          "implementation": "Ready for processing"
+        }
+      },
+      "intent_validation": {
+        "name": "Step 6: Intent Validation",
+        "completed": true,
+        "status": "Completed",
+        "start_time": 1757511273.9981093,
+        "end_time": 1757511273.99811,
+        "metadata": {
+          "validation_type": "Critical value preservation"
+        }
+      },
+      "human_review": {
+        "name": "Step 7: Human Review",
+        "completed": false,
+        "status": "Skipped - Not enabled",
+        "start_time": null,
+        "end_time": null,
+        "metadata": {}
+      }
+    }
+  },
+  "workflow_steps": {
+    "template_selection": {
+      "name": "Step 1: Template Selection",
+      "completed": true,
+      "status": "Completed",
+      "start_time": 1757511273.998094,
+      "end_time": 1757511273.9981015,
+      "metadata": {
+        "selected_template": "clinical-protocol/device-ide.j2",
+        "regulatory_section": "Device"
+      }
+    },
+    "key_value_entry": {
+      "name": "Step 2: Key Value Entry",
+      "completed": true,
+      "status": "Completed",
+      "start_time": 1757511273.9981015,
+      "end_time": 1757511273.9981046,
+      "metadata": {
+        "fields_provided": 5,
+        "missing_fields": []
+      }
+    },
+    "sub_template_selection": {
+      "name": "Step 3: Sub-template Selection",
+      "completed": true,
+      "status": "Completed",
+      "start_time": 1757511273.9981046,
+      "end_time": 1757511273.9981053,
+      "metadata": {
+        "sub_templates_selected": 5,
+        "sub_template_ids": [
+          "ide",
+          "device-specific",
+          "fda-device",
+          "cardiac-endpoints",
+          "cardiovascular-safety"
+        ]
+      }
+    },
+    "value_propagation": {
+      "name": "Step 4: Value Propagation",
+      "completed": true,
+      "status": "Completed",
+      "start_time": 1757511273.9981053,
+      "end_time": 1757511273.9981086,
+      "metadata": {
+        "values_propagated": 3,
+        "propagated_fields": [
+          "study_name",
+          "sponsor_name",
+          "device_name"
+        ]
+      }
+    },
+    "llm_rewording": {
+      "name": "Step 5: LLM Rewording",
+      "completed": true,
+      "status": "Ready for LLM processing",
+      "start_time": 1757511273.9981089,
+      "end_time": 1757511273.998109,
+      "metadata": {
+        "enabled": true,
+        "implementation": "Ready for processing"
+      }
+    },
+    "intent_validation": {
+      "name": "Step 6: Intent Validation",
+      "completed": true,
+      "status": "Completed",
+      "start_time": 1757511273.9981093,
+      "end_time": 1757511273.99811,
+      "metadata": {
+        "validation_type": "Critical value preservation"
+      }
+    },
+    "human_review": {
+      "name": "Step 7: Human Review",
+      "completed": false,
+      "status": "Skipped - Not enabled",
+      "start_time": null,
+      "end_time": null,
+      "metadata": {}
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{% extends "clinical-protocol/master-protocol.j2" %}
+
+{% block title %}
+INVESTIGATIONAL DEVICE EXEMPTION (IDE) PROTOCOL
+{{ study_name | upper }}
+IDE Number: {{ ide_number | default("PENDING") }}
+Protocol Number: {{ protocol_number }}
+{% endblock %}
+
+{% block content %}
+{{ super() }}
+
+## DEVICE-SPECIFIC SECTIONS
+
+### A. DEVICE DESCRIPTION AND SPECIFICATIONS
+
+#### Device Name
+{{ device_name }}
+
+#### Device Classification
+{{ device_classification | default("Class III") }}
+
+#### Intended Use
+{{ device_intended_use | default("The device is intended for...") }}
+
+#### Device Components
+{{ device_components | default("The investigational device consists of...") }}
+
+#### Mechanism of Action
+{{ device_mechanism | default("The device functions by...") }}
+
+### B. PRECLINICAL TESTING
+
+#### Bench Testing
+{{ bench_testing_summary | default("Bench testing has demonstrated...") }}
+
+#### Animal Studies
+{{ animal_studies_summary | default("Preclinical animal studies showed...") }}
+
+#### Biocompatibility
+{{ biocompatibility_summary | default("Biocompatibility testing per ISO 10993...") }}
+
+### C. MANUFACTURING INFORMATION
+
+#### Manufacturing Site
+{{ manufacturing_site | default("To be provided") }}
+
+#### Quality System
+{{ quality_system | default("Manufactured under 21 CFR 820 Quality System Regulation") }}
+
+#### Sterilization Method
+{{ sterilization_method | default("Ethylene oxide sterilization") }}
+
+### D. DEVICE ACCOUNTABILITY
+
+#### Device Tracking
+All investigational devices will be tracked using unique serial numbers.
+
+#### Device Storage
+{{ device_storage_requirements | default("Store at controlled room temperature (20-25°C)") }}
+
+#### Device Disposition
+{{ device_disposition | default("All devices will be returned to sponsor or destroyed per protocol") }}
+
+### E. TRAINING REQUIREMENTS
+
+#### Investigator Training
+{{ investigator_training | default("All investigators must complete device-specific training prior to first subject enrollment") }}
+
+#### Procedure Requirements
+{{ procedure_requirements | default("Device implantation/use must be performed by qualified physicians") }}
+
+### F. DEVICE-RELATED ADVERSE EVENTS
+
+#### Anticipated Device-Related Events
+{{ anticipated_device_events | default("- Device malfunction\n- Device migration\n- Device-related infection") }}
+
+#### Unanticipated Adverse Device Effects (UADE) Reporting
+UADEs will be reported to FDA within 10 working days of sponsor awareness.
+
+### G. DEVICE DEFICIENCIES AND RECALLS
+
+#### Device Deficiency Reporting
+Any device deficiencies will be documented and reported per 21 CFR 812.
+
+#### Recall Procedures
+{{ recall_procedures | default("In the event of a device recall, all sites will be notified immediately") }}
+
+{% endblock %}

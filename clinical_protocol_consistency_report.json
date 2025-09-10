@@ -1,0 +1,38 @@
+{
+  "num_runs": 3,
+  "successful_runs": 3,
+  "unique_outputs": 1,
+  "consistency_rate": 1.0,
+  "avg_workflow_completion": 0.8571428571428571,
+  "report": {
+    "overall_metrics": {
+      "mean_cv": 0.0,
+      "meets_target": true,
+      "document_types_analyzed": 1
+    },
+    "by_document_type": {
+      "clinical-protocol": {
+        "runs": 3,
+        "cv": 0.0,
+        "structural_consistency": 1.0,
+        "mean_word_count": 604.0,
+        "unique_outputs": 1
+      }
+    }
+  },
+  "hashes": [
+    "9d287da8",
+    "9d287da8",
+    "9d287da8"
+  ],
+  "word_counts": [
+    604,
+    604,
+    604
+  ],
+  "workflow_completions": [
+    0.8571428571428571,
+    0.8571428571428571,
+    0.8571428571428571
+  ]
+}

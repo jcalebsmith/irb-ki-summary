@@ -1,13 +1,17 @@
 import io
 import logging
 import re
-from typing import Union
+from typing import Union, Optional, Dict, Any, List
+import asyncio
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from .pdf import read_pdf
-from .summary import generate_summary
+from .core.document_framework import DocumentGenerationFramework
+from .core.exceptions import DocumentFrameworkError, PDFProcessingError
+from llama_index.core.schema import Document
 
 
 def convert_section(text):
@@ -22,9 +26,9 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or specify the origin(s) of your Next.js app, e.g., ["http://localhost:3000"]
+    allow_origins=["http://localhost:3000"],  # Restricted to specific origins for security
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -37,20 +41,249 @@ def read_root():
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
+class DocumentGenerationRequest(BaseModel):
+    """Request model for document generation with explicit plugin selection."""
+    plugin_id: str  # Required - no default, user must specify
+    template_id: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = {}
+
+
+class DocumentGenerationResponse(BaseModel):
+    """Unified response model for all document generation endpoints"""
+    sections: List[str]  # List of section names
+    texts: List[str]     # List of section texts (parallel to sections)
+    metadata: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+# Initialize framework for new endpoints
+framework = DocumentGenerationFramework()
+
+
 @app.post("/uploadfile/")
 async def create_upload_file(file: UploadFile):
+    """Unified endpoint using new framework for informed consent KI summary"""
     contents = await file.read()
     file_io = io.BytesIO(contents)
-    final_responses = generate_summary(file_io)
+    pdf_pages = read_pdf(file_io)
+    
+    # Convert to Document
+    full_text = "\n\n".join(pdf_pages.texts)
+    document = Document(
+        text=full_text,
+        metadata={
+            "page_labels": pdf_pages.labels,
+            "source": file.filename or "uploaded_file.pdf"
+        }
+    )
+    
+    # Generate using framework with informed-consent-ki type
+    result = await framework.generate(
+        document_type="informed-consent-ki",
+        parameters={},
+        document=document
+    )
+    
+    if result.success:
+        # Parse sections from content for compatibility
+        sections = []
+        texts = []
+        
+        if "Section" in result.content:
+            section_parts = result.content.split("\n\nSection ")
+            for i, part in enumerate(section_parts):
+                if part.strip():
+                    if i == 0 and not part.startswith("Section"):
+                        # Skip header if present
+                        continue
+                    lines = part.split("\n", 1)
+                    if len(lines) > 0:
+                        section_num = lines[0].strip() if i > 0 else part.split("\n")[0].replace("Section ", "").strip()
+                        section_text = lines[1].strip() if len(lines) > 1 else ""
+                        sections.append(f"Section {section_num}")
+                        texts.append(section_text)
+        
+        # Add total summary
+        sections.append("Total Summary")
+        texts.append("\n\n".join(texts))
+        
+        return {"sections": sections, "texts": texts}
+    else:
+        # Return error in expected format
+        return {
+            "sections": ["Error"],
+            "texts": [f"Failed to generate summary: {result.error_message}"]
+        }
 
-    sections = []
-    texts = []
 
-    for section in sorted(final_responses):
-        if section != "Total Summary":
-            sections.append(convert_section(section))
+@app.post("/generate/")
+async def generate_document(
+    file: UploadFile = File(...),
+    plugin_id: str = Form(...),  # Required - user must explicitly specify
+    template_id: Optional[str] = Form(None),
+    parameters: Optional[str] = Form("{}")
+):
+    """
+    Unified endpoint for document generation with explicit plugin selection.
+    
+    Args:
+        file: The PDF file to process
+        plugin_id: ID of the plugin to use (required - e.g., "informed-consent-ki", "clinical-protocol")
+        template_id: Optional specific template ID within the plugin
+        parameters: JSON string with additional parameters
+    
+    Returns:
+        Standardized response with sections and texts lists
+    """
+    try:
+        # Parse parameters
+        import json
+        params = json.loads(parameters) if parameters else {}
+        
+        # Read PDF
+        contents = await file.read()
+        file_io = io.BytesIO(contents)
+        pdf_pages = read_pdf(file_io)
+        
+        # Convert to Document
+        full_text = "\n\n".join(pdf_pages.texts)
+        document = Document(
+            text=full_text,
+            metadata={
+                "page_labels": pdf_pages.labels,
+                "source": file.filename
+            }
+        )
+        
+        # Add template_id to parameters if provided
+        if template_id:
+            params["template_id"] = template_id
+        
+        # Generate using framework with explicit plugin
+        result = await framework.generate(
+            document_type=plugin_id,  # Using plugin_id as document_type
+            parameters=params,
+            document=document
+        )
+        
+        if result.success:
+            sections = []
+            texts = []
+            
+            # Parse sections based on plugin type
+            if plugin_id == "informed-consent-ki":
+                # KI summary format with 9 sections
+                if "Section" in result.content:
+                    section_parts = result.content.split("\n\nSection ")
+                    for i, part in enumerate(section_parts):
+                        if part.strip():
+                            if i == 0 and not part.startswith("Section"):
+                                continue
+                            lines = part.split("\n", 1)
+                            if len(lines) > 0:
+                                section_num = lines[0].strip() if i > 0 else part.split("\n")[0].replace("Section ", "").strip()
+                                section_text = lines[1].strip() if len(lines) > 1 else ""
+                                sections.append(f"Section {section_num}")
+                                texts.append(section_text)
+                    
+                    # Add total summary for KI
+                    sections.append("Total Summary")
+                    texts.append("\n\n".join(texts))
+            else:
+                # Generic parsing for other document types
+                if "\n## " in result.content:
+                    # Parse markdown sections
+                    content_sections = result.content.split("\n## ")
+                    for i, section in enumerate(content_sections):
+                        if section.strip():
+                            lines = section.split("\n", 1)
+                            if len(lines) > 0:
+                                section_title = lines[0].strip()
+                                section_content = lines[1].strip() if len(lines) > 1 else ""
+                                sections.append(section_title)
+                                texts.append(section_content)
+                else:
+                    # Return as single section
+                    sections.append(document_type.replace("-", " ").title())
+                    texts.append(result.content)
+            
+            return {
+                "sections": sections,
+                "texts": texts,
+                "metadata": result.metadata
+            }
         else:
-            sections.append(section)
-        texts.append(final_responses[section])
+            return {
+                "sections": ["Error"],
+                "texts": [f"Failed to generate document: {result.error_message}"],
+                "error": result.error_message
+            }
+            
+    except DocumentFrameworkError as e:
+        # Framework-specific errors with detailed context
+        return {
+            "sections": ["Error"],
+            "texts": [e.message],
+            "error": e.message,
+            "details": e.details
+        }
+    except Exception as e:
+        # Unexpected errors
+        return {
+            "sections": ["Error"],
+            "texts": [f"An unexpected error occurred: {str(e)}"],
+            "error": str(e)
+        }
 
-    return {"sections": sections, "texts": texts}
+
+@app.get("/plugins/")
+async def list_plugins():
+    """List all available plugins for document processing.
+    
+    Returns a list of plugins with their IDs, names, and descriptions.
+    Users must specify one of these plugin IDs when calling /generate/.
+    """
+    plugin_ids = framework.list_supported_document_types()
+    return {
+        "plugins": [
+            {
+                "plugin_id": plugin_id,
+                "info": framework.get_plugin_info(plugin_id)
+            }
+            for plugin_id in plugin_ids
+        ],
+        "total": len(plugin_ids)
+    }
+
+
+@app.get("/plugins/{plugin_id}/")
+async def get_plugin_info(plugin_id: str):
+    """Get detailed information about a specific plugin.
+    
+    Args:
+        plugin_id: The ID of the plugin (e.g., "informed-consent-ki")
+    
+    Returns:
+        Detailed plugin information including supported templates,
+        validation rules, and capabilities.
+    """
+    info = framework.get_plugin_info(plugin_id)
+    if not info:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Plugin '{plugin_id}' not found. Use GET /plugins/ to see available plugins."
+        )
+    return {
+        "plugin_id": plugin_id,
+        "details": info,
+        "usage": {
+            "endpoint": "/generate/",
+            "required_fields": {
+                "file": "PDF file to process",
+                "plugin_id": plugin_id,
+                "template_id": "Optional template within plugin",
+                "parameters": "Optional JSON parameters"
+            }
+        }
+    }
+

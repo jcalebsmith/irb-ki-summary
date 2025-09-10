@@ -1,0 +1,6 @@
+{
+  "task": "m-refactor-app-codebase",
+  "branch": "feature/refactor-app-codebase",
+  "services": ["app", "app.core", "app.plugins", "app.templates"],
+  "updated": "2025-09-10"
+}

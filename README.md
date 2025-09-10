@@ -1,6 +1,6 @@
 # IRB Key Information Summary Backend
 
-A FastAPI-based backend service that processes and analyzes Informed Consent documents for human subjects research. The service uses advanced language models and embeddings via Azure OpenAI Service to generate clear, understandable summaries of complex research consent documents.
+A FastAPI-based backend service that processes and analyzes Informed Consent documents for human subjects research. The service uses advanced language models and  via Azure OpenAI Service to generate clear, understandable summaries of complex research consent documents.
 
 ## Features
 
@@ -54,10 +54,28 @@ Replace the placeholders (`<...>`) with your actual values. The application uses
 - `GET /`: Health check endpoint
 - Response: `{"Hello": "World3"}`
 
-### File Upload
-- `POST /uploadfile/`: Upload and process PDF documents
-- Accepts: PDF file upload
-- Returns: JSON object containing sectioned summaries of the document
+### Plugin Discovery
+- `GET /plugins/`: List all available plugins
+  - Returns list of plugin IDs with their names and descriptions
+  - Users must choose one of these plugins for document processing
+
+- `GET /plugins/{plugin_id}/`: Get detailed information about a specific plugin
+  - Returns plugin capabilities, templates, and usage instructions
+
+### Document Generation
+- `POST /generate/`: Process documents with explicit plugin selection
+  - **Required Parameters:**
+    - `file`: PDF file to process
+    - `plugin_id`: ID of the plugin to use (e.g., "informed-consent-ki", "clinical-protocol")
+  - **Optional Parameters:**
+    - `template_id`: Specific template within the plugin
+    - `parameters`: JSON string with additional configuration
+  - Returns: JSON object with sections and texts arrays
+
+### Legacy Endpoints (Backward Compatibility)
+- `POST /uploadfile/`: Process informed consent documents (uses "informed-consent-ki" plugin)
+  - Accepts: PDF file upload
+  - Returns: JSON object containing sectioned summaries
 
 ## Technical Architecture
 

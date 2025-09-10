@@ -1,0 +1,135 @@
+{% extends "clinical-protocol/master-protocol.j2" %}
+
+{% block title %}
+INVESTIGATIONAL BIOLOGIC PRODUCT PROTOCOL
+{{ study_name | upper }}
+IND Number: {{ ind_number | default("PENDING") }}
+Protocol Number: {{ protocol_number }}
+{% endblock %}
+
+{% block content %}
+{{ super() }}
+
+## BIOLOGIC-SPECIFIC SECTIONS
+
+### A. INVESTIGATIONAL BIOLOGIC INFORMATION
+
+#### Biologic Name
+{{ biologic_name }} ({{ biologic_type | default("monoclonal antibody, vaccine, gene therapy, etc.") }})
+
+#### Product Classification
+{{ biologic_classification | default("Therapeutic biologic product") }}
+
+#### Source and Production
+{{ biologic_source | default("Produced in mammalian cell culture") }}
+
+#### Formulation and Presentation
+{{ biologic_formulation | default("Sterile solution for injection") }}
+
+#### Route of Administration
+{{ route_of_administration | default("Intravenous infusion") }}
+
+#### Dosing Regimen
+{{ dosing_regimen | default("Dose calculated based on body weight or surface area") }}
+
+### B. PRODUCT CHARACTERIZATION
+
+#### Molecular Characteristics
+{{ molecular_characteristics | default("Molecular weight, structure, and composition...") }}
+
+#### Biological Activity
+{{ biological_activity | default("Mechanism of action and target specificity...") }}
+
+#### Immunogenicity
+{{ immunogenicity_profile | default("Potential for immune response and antibody formation...") }}
+
+### C. MANUFACTURING AND QUALITY
+
+#### Manufacturing Process
+{{ manufacturing_process | default("Produced using recombinant DNA technology in CHO cells") }}
+
+#### Product Specifications
+{{ product_specifications | default("Identity, purity, potency, and safety specifications") }}
+
+#### Lot Release Criteria
+{{ lot_release_criteria | default("Each lot tested for sterility, endotoxin, and potency") }}
+
+#### Viral Safety
+{{ viral_safety | default("Viral clearance validation and testing performed") }}
+
+### D. NONCLINICAL STUDIES
+
+#### Pharmacology Studies
+{{ pharmacology_summary | default("Primary and secondary pharmacology in relevant models...") }}
+
+#### Toxicology Program
+{{ toxicology_program | default("Single and repeat-dose toxicity studies...") }}
+
+#### Immunotoxicity
+{{ immunotoxicity | default("Assessment of immune system effects...") }}
+
+#### Species Selection Rationale
+{{ species_rationale | default("Relevant species selected based on target binding...") }}
+
+### E. CLINICAL EXPERIENCE
+
+#### Prior Clinical Studies
+{{ prior_clinical_studies | default("Phase 1/2 studies have shown...") }}
+
+#### Dose Selection Rationale
+{{ dose_selection | default("Dose selected based on PK/PD modeling and prior studies") }}
+
+#### Immunogenicity Monitoring
+{{ immunogenicity_monitoring | default("Anti-drug antibodies will be assessed at specified timepoints") }}
+
+### F. PRODUCT HANDLING AND ADMINISTRATION
+
+#### Storage Requirements
+{{ storage_requirements | default("Store at 2-8°C, do not freeze, protect from light") }}
+
+#### Preparation Instructions
+{{ preparation_instructions | default("Dilute in 0.9% sodium chloride to final concentration...") }}
+
+#### Administration Guidelines
+{{ administration_guidelines | default("Infuse over specified time with monitoring...") }}
+
+#### Infusion Reactions Management
+{{ infusion_reaction_management | default("Pre-medication and management of infusion reactions...") }}
+
+### G. SPECIAL CONSIDERATIONS
+
+#### Contraception Requirements
+{{ contraception_requirements | default("Due to unknown effects on fetus, adequate contraception required") }}
+
+#### Pregnancy and Lactation
+{{ pregnancy_lactation | default("Women of childbearing potential must have negative pregnancy test") }}
+
+#### Immunosuppression Considerations
+{{ immunosuppression | default("Live vaccines contraindicated during treatment period") }}
+
+#### Long-term Follow-up
+{{ longterm_followup | default("Subjects followed for immunogenicity and delayed adverse events") }}
+
+### H. BIOSAFETY
+
+#### Handling Precautions
+{{ handling_precautions | default("Universal precautions for handling biological products") }}
+
+#### Waste Disposal
+{{ waste_disposal | default("Dispose of product and materials per institutional biosafety guidelines") }}
+
+#### Occupational Exposure
+{{ occupational_exposure | default("Report any accidental exposure to study product") }}
+
+### I. REGULATORY CONSIDERATIONS
+
+#### FDA Guidance Compliance
+Study conducted in accordance with FDA guidance for biological products
+
+#### International Standards
+{{ international_standards | default("Compliant with ICH guidelines for biotechnology products") }}
+
+#### Biosimilar Considerations
+{{ biosimilar_info | default("Not applicable" if biologic_type != "biosimilar" else "Biosimilarity assessment per FDA guidance") }}
+
+{% endblock %}

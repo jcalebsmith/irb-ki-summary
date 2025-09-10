@@ -1,0 +1,32 @@
+{
+  "num_runs": 3,
+  "successful_runs": 3,
+  "unique_outputs": 2,
+  "consistency_rate": 0.6666666666666667,
+  "report": {
+    "overall_metrics": {
+      "mean_cv": 0.10903728314364651,
+      "meets_target": true,
+      "document_types_analyzed": 1
+    },
+    "by_document_type": {
+      "informed-consent": {
+        "runs": 3,
+        "cv": 0.10903728314364651,
+        "structural_consistency": 0.6666666666666667,
+        "mean_word_count": 432.3333333333333,
+        "unique_outputs": 2
+      }
+    }
+  },
+  "hashes": [
+    "25f7e950",
+    "54a42d6a",
+    "54a42d6a"
+  ],
+  "word_counts": [
+    433,
+    432,
+    432
+  ]
+}

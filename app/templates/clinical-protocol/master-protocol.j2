@@ -1,0 +1,141 @@
+{% extends "base/master.j2" %}
+
+{% block title %}
+CLINICAL RESEARCH STUDY PROTOCOL
+{{ study_name | upper }}
+Protocol Number: {{ protocol_number }}
+{% endblock %}
+
+{% block content %}
+## 1. PROTOCOL SUMMARY
+
+### Study Title
+{{ study_name }}
+
+### Sponsor
+{{ sponsor_name }}
+{{ sponsor_address | default("") }}
+
+### Protocol Number
+{{ protocol_number }}
+
+### Study Phase
+{{ study_phase }}
+
+### Regulatory Classification
+{{ regulatory_section | capitalize }}
+
+## 2. STUDY OBJECTIVES
+
+### Primary Objective
+{{ primary_objective | default("To evaluate the safety and efficacy of the investigational product.") }}
+
+### Primary Endpoint
+{{ primary_endpoint }}
+
+### Secondary Objectives
+{{ secondary_objectives | default("To be determined based on study design.") }}
+
+## 3. STUDY DESIGN
+
+### Design Type
+{{ study_design }}
+
+### Study Duration
+{{ study_duration | default("To be determined") }}
+
+### Number of Subjects
+{{ sample_size }} subjects will be enrolled
+
+### Study Population
+{{ study_population | default("Adults meeting inclusion/exclusion criteria") }}
+
+## 4. INVESTIGATIONAL PRODUCT
+
+{% if regulatory_section == "device" %}
+### Investigational Device
+{{ device_name }}
+{{ device_description | default("") }}
+{% elif regulatory_section == "drug" %}
+### Investigational Drug
+{{ drug_name }}
+{{ drug_description | default("") }}
+{% elif regulatory_section == "biologic" %}
+### Investigational Biologic
+{{ biologic_name }}
+{{ biologic_description | default("") }}
+{% endif %}
+
+## 5. ELIGIBILITY CRITERIA
+
+### Inclusion Criteria
+{{ inclusion_criteria | default("Subjects must meet all of the following criteria to be eligible for enrollment.") }}
+
+### Exclusion Criteria
+{{ exclusion_criteria | default("Subjects meeting any of the following criteria will be excluded from enrollment.") }}
+
+## 6. STUDY PROCEDURES
+
+### Screening
+{{ screening_procedures | default("Screening will occur within 30 days prior to enrollment.") }}
+
+### Treatment Period
+{{ treatment_procedures | default("Treatment procedures will be conducted according to the protocol schedule.") }}
+
+### Follow-up
+{{ followup_procedures | default("Subjects will be followed for safety and efficacy endpoints.") }}
+
+## 7. SAFETY MONITORING
+
+### Safety Parameters
+{{ safety_parameters | default("Safety will be assessed through adverse event monitoring, laboratory tests, and vital signs.") }}
+
+### Data Safety Monitoring Board (DSMB)
+{{ dsmb_info | default("An independent DSMB will review safety data periodically.") }}
+
+### Stopping Rules
+{{ stopping_rules | default("The study may be stopped for safety concerns as determined by the DSMB.") }}
+
+## 8. STATISTICAL CONSIDERATIONS
+
+### Sample Size Calculation
+{{ sample_size_justification | default("Sample size of " + sample_size|string + " provides adequate power for the primary endpoint.") }}
+
+### Statistical Analysis Plan
+{{ statistical_plan | default("Primary analysis will be conducted on the intent-to-treat population.") }}
+
+### Interim Analysis
+{{ interim_analysis | default("No interim analysis is planned.") }}
+
+## 9. ETHICAL CONSIDERATIONS
+
+### IRB Review
+This protocol will be reviewed and approved by the Institutional Review Board prior to study initiation.
+
+### Informed Consent
+All subjects will provide written informed consent prior to any study procedures.
+
+### Risk-Benefit Assessment
+{{ risk_benefit | default("The potential benefits of the study outweigh the risks to participants.") }}
+
+## 10. REGULATORY REQUIREMENTS
+
+{% if regulatory_section == "device" %}
+### IDE Requirements
+This study will be conducted under IDE # {{ ide_number | default("PENDING") }}
+{% elif regulatory_section in ["drug", "biologic"] %}
+### IND Requirements  
+This study will be conducted under IND # {{ ind_number | default("PENDING") }}
+{% endif %}
+
+### Good Clinical Practice
+This study will be conducted in accordance with ICH GCP guidelines and applicable regulations.
+
+## 11. REFERENCES
+
+{{ references | default("1. ICH E6(R2) Good Clinical Practice Guidelines\n2. FDA Guidance Documents\n3. Sponsor Protocol Development Guidelines") }}
+
+---
+*Version: {{ version | default("1.0") }}*
+*Date: {{ date | default("DRAFT") }}*
+{% endblock %}

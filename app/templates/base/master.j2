@@ -1,0 +1,15 @@
+{# Base master template for document generation #}
+
+{# Optional title block for templates that use it #}
+{% block title %}{% endblock title %}
+
+{# Primary content wrapper #}
+{% block content %}
+  {# Support newer templates that define document_* blocks #}
+  {% block document_header %}{% endblock document_header %}
+  {% block document_body %}{% endblock document_body %}
+  {% block document_footer %}{% endblock document_footer %}
+{% endblock content %}
+
+{# Optional footer block for legacy templates #}
+{% block footer %}{% endblock footer %}
