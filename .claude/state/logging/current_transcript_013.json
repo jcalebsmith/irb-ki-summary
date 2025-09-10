@@ -1,0 +1,349 @@
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01HgBYZnbTd3f72nWSmfE4hY",
+        "type": "tool_result",
+        "content": "     1→\"\"\"\n     2→Multi-Agent System for Document Generation\n     3→Implements specialized agents with orchestration and validation\n     4→\"\"\"\n     5→from abc import ABC, abstractmethod\n     6→from typing import Dict, Any, List, Optional, Tuple\n     7→from dataclasses import dataclass, field\n     8→import asyncio\n     9→from enum import Enum\n    10→import json\n    11→import re\n    12→from .exceptions import AgentError, AgentCommunicationError, LLMError\n    13→\n    14→\n    15→class AgentRole(Enum):\n    16→    \"\"\"Roles that agents can play in the system\"\"\"\n    17→    EXTRACTOR = \"extractor\"  # Extracts information from documents\n    18→    GENERATOR = \"generator\"  # Generates new content\n    19→    VALIDATOR = \"validator\"  # Validates content and intent\n    20→    ROUTER = \"router\"  # Routes tasks to appropriate agents\n    21→    SPECIALIST = \"specialist\"  # Domain-specific specialist\n    22→\n    23→\n    24→@dataclass\n    25→class AgentMessage:\n    26→    \"\"\"Message passed between agents\"\"\"\n    27→    sender: str\n    28→    recipient: str\n    29→    content: Any\n    30→    message_type: str\n    31→    metadata: Dict[str, Any] = field(default_factory=dict)\n    32→    timestamp: Optional[float] = None\n    33→\n    34→\n    35→@dataclass\n    36→class AgentContext:\n    37→    \"\"\"Shared context for agent collaboration\"\"\"\n    38→    document_type: str\n    39→    parameters: Dict[str, Any]\n    40→    extracted_values: Dict[str, Any] = field(default_factory=dict)\n    41→    generated_content: Dict[str, str] = field(default_factory=dict)\n    42→    validation_results: Dict[str, Any] = field(default_factory=dict)\n    43→    critical_values: List[str] = field(default_factory=list)\n    44→    messages: List[AgentMessage] = field(default_factory=list)\n    45→\n    46→\n    47→class BaseAgent(ABC):\n    48→    \"\"\"Base class for all agents in the system\"\"\"\n    49→    \n    50→    def __init__(self, name: str, role: AgentRole):\n    51→        self.name = name\n    52→        self.role = role\n    53→        self.context: Optional[AgentContext] = None\n    54→    \n    55→    @abstractmethod\n    56→    async def process(self, context: AgentContext) -> Dict[str, Any]:\n    57→        \"\"\"Process the context and return results\"\"\"\n    58→        pass\n    59→    \n    60→    def send_message(self, recipient: str, content: Any, message_type: str = \"info\"):\n    61→        \"\"\"Send a message to another agent\"\"\"\n    62→        if self.context:\n    63→            message = AgentMessage(\n    64→                sender=self.name,\n    65→                recipient=recipient,\n    66→                content=content,\n    67→                message_type=message_type\n    68→            )\n    69→            self.context.messages.append(message)\n    70→    \n    71→    def receive_messages(self) -> List[AgentMessage]:\n    72→        \"\"\"Receive messages addressed to this agent\"\"\"\n    73→        if not self.context:\n    74→            return []\n    75→        return [msg for msg in self.context.messages if msg.recipient == self.name]\n    76→\n    77→\n    78→class ExtractionAgent(BaseAgent):\n    79→    \"\"\"Agent specialized in extracting information from documents\"\"\"\n    80→    \n    81→    def __init__(self, name: str = \"ExtractorAgent\"):\n    82→        super().__init__(name, AgentRole.EXTRACTOR)\n    83→        self.extraction_patterns = {\n    84→            \"study_title\": r\"(?:Title|Study|Protocol):\\s*([^\\n]+)\",\n    85→            \"principal_investigator\": r\"(?:PI|Principal Investigator|Investigator):\\s*([^\\n]+)\",\n    86→            \"irb_number\": r\"(?:IRB|Protocol)\\s*(?:Number|#):\\s*([A-Z0-9-]+)\",\n    87→            \"sponsor\": r\"(?:Sponsor|Funded by):\\s*([^\\n]+)\",\n    88→            \"duration\": r\"(?:Duration|Length|Last):\\s*(\\d+\\s*(?:days?|weeks?|months?|years?))\",\n    89→            \"visits\": r\"(\\d+)\\s*(?:visits?|appointments?)\",\n    90→        }\n    91→    \n    92→    async def process(self, context: AgentContext) -> Dict[str, Any]:\n    93→        \"\"\"Extract key information from document\"\"\"\n    94→        self.context = context\n    95→        extracted = {}\n    96→        \n    97→        # Get document text from parameters\n    98→        doc_text = context.parameters.get(\"document_text\", \"\")\n    99→        \n   100→        # Extract using patterns\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I can see the current agent system has some good structure but could benefit from better interfaces and separation of concerns. Let me continue reading to understand the full structure.",
+        "signature": "EuQCCkYIBxgCKkDTg4FcodbHa097622hbs3p3kFfU39uVhR6L4ICNj0F4moWrnrdvQ8qvTFEvcRfXyLYYD0G2t+xPOHhTRM3aqjvEgwaU0cX8jx+6lLOJzAaDJzEqT7Vwi5hbA6HGiIwhPtaGAN+ZCSkIRRrjJTGakwhoV85hb4mZ5tCwe0MlqvsOJJeB2zA4GqllMeDsP/MKssB0rQczMdjdylXK4htoEfNmO3kvJZwny/+n53rCEIUjexBpxUKYA08G6varNcftZvg39RbeWGbV1FeAvkVmfE12g7VeSmCFX++DfQ5MTIWfaqgVbhC1YkNM4nheIG81TbZLSCl5ucWMorVUNSFrp8UpYxmsrOL8XHVOQQdJ14U/lkmpOI44dI+TAf1pTlULNnPDh3bLAsyEbWYKjgGgqLVhADzzf9KBn5frfkoza8GnePSeQih7QzYTD7GrgQNMbFrsZF7IlTodWAVIOgYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01CUQRx9uLTYebhhq5XmjzHx",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "offset": 100,
+          "limit": 150
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01CUQRx9uLTYebhhq5XmjzHx",
+        "type": "tool_result",
+        "content": "   100→        # Extract using patterns\n   101→        for field, pattern in self.extraction_patterns.items():\n   102→            match = re.search(pattern, doc_text, re.IGNORECASE)\n   103→            if match:\n   104→                extracted[field] = match.group(1).strip()\n   105→        \n   106→        # Store in context\n   107→        context.extracted_values.update(extracted)\n   108→        \n   109→        # Send message to validator\n   110→        self.send_message(\"ValidatorAgent\", extracted, \"extraction_complete\")\n   111→        \n   112→        return extracted\n   113→\n   114→\n   115→class GenerationAgent(BaseAgent):\n   116→    \"\"\"Agent specialized in generating content\"\"\"\n   117→    \n   118→    def __init__(self, name: str = \"GeneratorAgent\", llm=None):\n   119→        super().__init__(name, AgentRole.GENERATOR)\n   120→        self.llm = llm\n   121→    \n   122→    async def process(self, context: AgentContext) -> Dict[str, Any]:\n   123→        \"\"\"Generate content based on context using LLM\"\"\"\n   124→        self.context = context\n   125→        generated = {}\n   126→        \n   127→        # Generate section content based on extracted values\n   128→        extracted = context.extracted_values\n   129→        \n   130→        if self.llm:\n   131→            # Use LLM to generate content\n   132→            from llama_index.core.llms import ChatMessage\n   133→            \n   134→            # Generate introduction section\n   135→            if \"study_title\" in extracted:\n   136→                prompt = f\"\"\"Generate a brief, clear introduction for a research study.\n   137→                Study Title: {extracted['study_title']}\n   138→                Keep it under 100 words and focus on the purpose and importance.\"\"\"\n   139→                \n   140→                try:\n   141→                    messages = [ChatMessage(role=\"user\", content=prompt)]\n   142→                    response = self.llm.chat(messages)\n   143→                    generated[\"section1_intro\"] = response.message.content.strip()\n   144→                except (LLMError, Exception) as e:\n   145→                    # Fallback to simple generation on any LLM error\n   146→                    generated[\"section1_intro\"] = f\"This research study, titled '{extracted['study_title']}', aims to advance our understanding.\"\n   147→            \n   148→            # Generate participation details section\n   149→            if \"duration\" in extracted or \"visits\" in extracted:\n   150→                details = []\n   151→                if \"duration\" in extracted:\n   152→                    details.append(f\"Duration: {extracted['duration']}\")\n   153→                if \"visits\" in extracted:\n   154→                    details.append(f\"Visits: {extracted['visits']}\")\n   155→                \n   156→                if details:\n   157→                    prompt = f\"\"\"Generate a clear explanation of participation requirements.\n   158→                    {' '.join(details)}\n   159→                    Write in second person, be concise and clear.\"\"\"\n   160→                    \n   161→                    try:\n   162→                        messages = [ChatMessage(role=\"user\", content=prompt)]\n   163→                        response = self.llm.chat(messages)\n   164→                        generated[\"section5_content\"] = response.message.content.strip()\n   165→                    except (LLMError, Exception) as e:\n   166→                        # Fallback on any LLM error\n   167→                        if \"duration\" in extracted and \"visits\" in extracted:\n   168→                            generated[\"section5_content\"] = f\"Your participation will last {extracted['duration']} and require {extracted['visits']}.\"\n   169→                        elif \"duration\" in extracted:\n   170→                            generated[\"section5_content\"] = f\"Your participation will last {extracted['duration']}.\"\n   171→                        else:\n   172→                            generated[\"section5_content\"] = f\"Your participation will require {extracted['visits']}.\"\n   173→        else:\n   174→            # Fallback to simple generation if no LLM available\n   175→            if \"study_title\" in extracted:\n   176→                generated[\"section1_intro\"] = f\"This research study, titled '{extracted['study_title']}', aims to advance our understanding.\"\n   177→            \n   178→            if \"duration\" in extracted and \"visits\" in extracted:\n   179→                generated[\"section5_content\"] = f\"Your participation will last {extracted['duration']} and require {extracted['visits']}.\"\n   180→        \n   181→        # Store generated content\n   182→        context.generated_content.update(generated)\n   183→        \n   184→        # Send to validator\n   185→        self.send_message(\"ValidatorAgent\", generated, \"generation_complete\")\n   186→        \n   187→        return generated\n   188→\n   189→\n   190→class ValidationAgent(BaseAgent):\n   191→    \"\"\"Agent specialized in validation and intent preservation\"\"\"\n   192→    \n   193→    def __init__(self, name: str = \"ValidatorAgent\"):\n   194→        super().__init__(name, AgentRole.VALIDATOR)\n   195→        self.validation_rules = {\n   196→            \"required_fields\": [\"study_title\", \"principal_investigator\"],\n   197→            \"max_lengths\": {\"study_title\": 200, \"section1_intro\": 500},\n   198→            \"intent_critical\": [\"study_title\", \"irb_number\", \"duration\", \"visits\"]\n   199→        }\n   200→    \n   201→    async def process(self, context: AgentContext) -> Dict[str, Any]:\n   202→        \"\"\"Validate content and check intent preservation\"\"\"\n   203→        self.context = context\n   204→        results = {\n   205→            \"passed\": True,\n   206→            \"issues\": [],\n   207→            \"warnings\": [],\n   208→            \"intent_preserved\": {}\n   209→        }\n   210→        \n   211→        # Check required fields\n   212→        for field in self.validation_rules[\"required_fields\"]:\n   213→            if field not in context.extracted_values:\n   214→                results[\"issues\"].append(f\"Required field missing: {field}\")\n   215→                results[\"passed\"] = False\n   216→        \n   217→        # Check max lengths\n   218→        for field, max_len in self.validation_rules[\"max_lengths\"].items():\n   219→            value = context.extracted_values.get(field) or context.generated_content.get(field)\n   220→            if value and len(str(value)) > max_len:\n   221→                results[\"warnings\"].append(f\"{field} exceeds max length of {max_len}\")\n   222→        \n   223→        # Check intent preservation\n   224→        for critical_field in self.validation_rules[\"intent_critical\"]:\n   225→            if critical_field in context.extracted_values:\n   226→                original_value = str(context.extracted_values[critical_field])\n   227→                \n   228→                # Check if value appears in any generated content\n   229→                preserved = False\n   230→                for content_key, content_value in context.generated_content.items():\n   231→                    if original_value.lower() in str(content_value).lower():\n   232→                        preserved = True\n   233→                        break\n   234→                \n   235→                results[\"intent_preserved\"][critical_field] = preserved\n   236→                if not preserved and critical_field in context.critical_values:\n   237→                    results[\"issues\"].append(f\"Critical value '{critical_field}' not preserved in output\")\n   238→                    results[\"passed\"] = False\n   239→        \n   240→        # Store validation results\n   241→        context.validation_results = results\n   242→        \n   243→        return results\n   244→\n   245→\n   246→class OrchestrationAgent(BaseAgent):\n   247→    \"\"\"Agent that orchestrates other agents\"\"\"\n   248→    \n   249→    def __init__(self, name: str = \"OrchestratorAgent\"):\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now I'll create a new file with better agent interfaces and improved separation of concerns. I'll use Protocol classes for interfaces, create specific agent interfaces, and improve the overall design.",
+        "signature": "EvMCCkYIBxgCKkA2yq2ENB9ywUl6wOR+12svSs8LRBmm8lkGKIfmXJGRmo3mylN1t4/cvXK34In6q1+kE15EAnPZqjLODlmPERFHEgyU792MGgxHc9idzOYaDHcIbkbkwFL33KR+AiIwlmZ5zU6zyISG3pk4MDD0AMgkSJ+TPw4cInFMztgCBMmSnDhXiOxqadw/YVfmstu/KtoB/99M/pM7HG7rWfjHQKIlibNoMce2XNgy1Jc62to3omjWCOj8PY9txgJhcwRFBcX4rKJ2EZCxrUw+AWN3RDlx5RUeL0AJcdIblsvwXsFxFkRwMO0IPE/5S8pgEYCd+zD0VoyV2QANU+fFNIUWx2xdsWy5u8sDn43zMANf60QSF9lr4CEVTWTk5j3ls1TL/a0s6ZS4uVk37UrN5mRv4k+/mwdA6zLQT1rGtdF7mjNKlF1jvkclhlpEsqeIodzd9EWMyaYEdX4mBGtRX5szN3fg0mLzinHVeUaq3o8YAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01AL2J8h57p5qPUSLfihjFp5",
+        "name": "Write",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/agent_interfaces.py",
+          "content": "\"\"\"\nAgent interfaces and protocols for the multi-agent system.\n\nThis module defines clear interfaces for agents using Protocol classes,\nimproving separation of concerns and making the system more extensible.\n\"\"\"\n\nfrom typing import Protocol, Dict, Any, List, Optional, runtime_checkable\nfrom abc import ABC, abstractmethod\nfrom dataclasses import dataclass, field\nfrom enum import Enum\nimport asyncio\nfrom datetime import datetime\n\n\nclass AgentRole(Enum):\n    \"\"\"Standardized roles for agents in the system.\"\"\"\n    EXTRACTOR = \"extractor\"      # Extracts information from documents\n    GENERATOR = \"generator\"      # Generates new content\n    VALIDATOR = \"validator\"      # Validates content and rules\n    TRANSFORMER = \"transformer\"  # Transforms content format\n    ROUTER = \"router\"           # Routes tasks to appropriate agents\n    SPECIALIST = \"specialist\"   # Domain-specific processing\n    ORCHESTRATOR = \"orchestrator\"  # Coordinates other agents\n\n\n@dataclass\nclass AgentMessage:\n    \"\"\"\n    Standardized message format for inter-agent communication.\n    \n    Attributes:\n        sender: Name/ID of the sending agent\n        recipient: Name/ID of the receiving agent\n        content: The message payload\n        message_type: Type of message (info, request, response, error)\n        correlation_id: Optional ID for tracking related messages\n        metadata: Additional message metadata\n        timestamp: When the message was created\n    \"\"\"\n    sender: str\n    recipient: str\n    content: Any\n    message_type: str\n    correlation_id: Optional[str] = None\n    metadata: dict[str, Any] = field(default_factory=dict)\n    timestamp: datetime = field(default_factory=datetime.now)\n\n\n@dataclass\nclass AgentContext:\n    \"\"\"\n    Shared context for agent collaboration.\n    \n    This context is passed between agents and accumulates results\n    as the document generation pipeline progresses.\n    \"\"\"\n    document_type: str\n    parameters: dict[str, Any]\n    extracted_values: dict[str, Any] = field(default_factory=dict)\n    generated_content: dict[str, str] = field(default_factory=dict)\n    transformed_content: dict[str, Any] = field(default_factory=dict)\n    validation_results: dict[str, Any] = field(default_factory=dict)\n    critical_values: list[str] = field(default_factory=list)\n    messages: list[AgentMessage] = field(default_factory=list)\n    metadata: dict[str, Any] = field(default_factory=dict)\n    \n    def add_message(self, message: AgentMessage) -> None:\n        \"\"\"Add a message to the context.\"\"\"\n        self.messages.append(message)\n    \n    def get_messages_for(self, recipient: str) -> list[AgentMessage]:\n        \"\"\"Get all messages for a specific recipient.\"\"\"\n        return [msg for msg in self.messages if msg.recipient == recipient]\n    \n    def clear_messages_for(self, recipient: str) -> None:\n        \"\"\"Clear messages for a specific recipient after processing.\"\"\"\n        self.messages = [msg for msg in self.messages if msg.recipient != recipient]\n\n\n@runtime_checkable\nclass IAgent(Protocol):\n    \"\"\"Protocol defining the interface all agents must implement.\"\"\"\n    \n    name: str\n    role: AgentRole\n    \n    async def process(self, context: AgentContext) -> dict[str, Any]:\n        \"\"\"Process the context and return results.\"\"\"\n        ...\n    \n    def validate_input(self, context: AgentContext) -> bool:\n        \"\"\"Validate that the agent can process the given context.\"\"\"\n        ...\n    \n    def get_capabilities(self) -> dict[str, Any]:\n        \"\"\"Return the agent's capabilities and requirements.\"\"\"\n        ...\n\n\n@runtime_checkable\nclass IExtractionAgent(Protocol):\n    \"\"\"Protocol for agents that extract information from documents.\"\"\"\n    \n    async def extract(self, text: str, patterns: dict[str, str]) -> dict[str, Any]:\n        \"\"\"Extract information using provided patterns.\"\"\"\n        ...\n    \n    async def extract_structured(self, text: str, schema: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Extract information according to a structured schema.\"\"\"\n        ...\n\n\n@runtime_checkable\nclass IGenerationAgent(Protocol):\n    \"\"\"Protocol for agents that generate content.\"\"\"\n    \n    async def generate(self, template: str, context: dict[str, Any]) -> str:\n        \"\"\"Generate content using a template and context.\"\"\"\n        ...\n    \n    async def generate_section(self, section_type: str, data: dict[str, Any]) -> str:\n        \"\"\"Generate a specific section type.\"\"\"\n        ...\n\n\n@runtime_checkable\nclass IValidationAgent(Protocol):\n    \"\"\"Protocol for agents that validate content.\"\"\"\n    \n    async def validate_rules(self, content: Any, rules: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Validate content against a set of rules.\"\"\"\n        ...\n    \n    async def validate_intent(self, original: str, transformed: str) -> bool:\n        \"\"\"Validate that intent is preserved between original and transformed.\"\"\"\n        ...\n\n\n@runtime_checkable\nclass IOrchestrationAgent(Protocol):\n    \"\"\"Protocol for agents that orchestrate other agents.\"\"\"\n    \n    async def orchestrate(self, agents: list[IAgent], context: AgentContext) -> dict[str, Any]:\n        \"\"\"Orchestrate a pipeline of agents.\"\"\"\n        ...\n    \n    def plan_execution(self, agents: list[IAgent], requirements: dict[str, Any]) -> list[str]:\n        \"\"\"Plan the execution order of agents.\"\"\"\n        ...\n\n\nclass BaseAgent(ABC):\n    \"\"\"\n    Abstract base class for all agents.\n    \n    Provides common functionality for agent implementation including\n    message handling, context management, and basic validation.\n    \"\"\"\n    \n    def __init__(self, name: str, role: AgentRole):\n        \"\"\"\n        Initialize the agent.\n        \n        Args:\n            name: Unique name for the agent\n            role: The role this agent plays in the system\n        \"\"\"\n        self.name = name\n        self.role = role\n        self._context: Optional[AgentContext] = None\n        self._capabilities: dict[str, Any] = {}\n    \n    @property\n    def context(self) -> Optional[AgentContext]:\n        \"\"\"Get the current context.\"\"\"\n        return self._context\n    \n    @context.setter\n    def context(self, value: AgentContext) -> None:\n        \"\"\"Set the current context.\"\"\"\n        self._context = value\n    \n    @abstractmethod\n    async def process(self, context: AgentContext) -> dict[str, Any]:\n        \"\"\"\n        Process the context and return results.\n        \n        Args:\n            context: The agent context to process\n            \n        Returns:\n            Dictionary containing processing results\n        \"\"\"\n        pass\n    \n    def validate_input(self, context: AgentContext) -> bool:\n        \"\"\"\n        Validate that the agent can process the given context.\n        \n        Args:\n            context: The context to validate\n            \n        Returns:\n            True if the context is valid for processing\n        \"\"\"\n        # Default implementation - override in subclasses for specific validation\n        return context is not None and context.document_type\n    \n    def get_capabilities(self) -> dict[str, Any]:\n        \"\"\"\n        Return the agent's capabilities and requirements.\n        \n        Returns:\n            Dictionary describing agent capabilities\n        \"\"\"\n        return {\n            \"name\": self.name,\n            \"role\": self.role.value,\n            \"capabilities\": self._capabilities\n        }\n    \n    def send_message(self, recipient: str, content: Any, \n                    message_type: str = \"info\",\n                    correlation_id: Optional[str] = None) -> None:\n        \"\"\"\n        Send a message to another agent.\n        \n        Args:\n            recipient: Name of the recipient agent\n            content: Message content\n            message_type: Type of message\n            correlation_id: Optional ID for message correlation\n        \"\"\"\n        if self._context:\n            message = AgentMessage(\n                sender=self.name,\n                recipient=recipient,\n                content=content,\n                message_type=message_type,\n                correlation_id=correlation_id\n            )\n            self._context.add_message(message)\n    \n    def receive_messages(self) -> list[AgentMessage]:\n        \"\"\"\n        Receive messages addressed to this agent.\n        \n        Returns:\n            List of messages for this agent\n        \"\"\"\n        if not self._context:\n            return []\n        return self._context.get_messages_for(self.name)\n    \n    def clear_messages(self) -> None:\n        \"\"\"Clear all messages for this agent.\"\"\"\n        if self._context:\n            self._context.clear_messages_for(self.name)\n    \n    async def handle_error(self, error: Exception, context: AgentContext) -> dict[str, Any]:\n        \"\"\"\n        Handle errors during processing.\n        \n        Args:\n            error: The exception that occurred\n            context: The context being processed\n            \n        Returns:\n            Error information dictionary\n        \"\"\"\n        error_info = {\n            \"agent\": self.name,\n            \"error\": str(error),\n            \"error_type\": type(error).__name__,\n            \"context_state\": {\n                \"has_extracted\": bool(context.extracted_values),\n                \"has_generated\": bool(context.generated_content),\n                \"has_validation\": bool(context.validation_results)\n            }\n        }\n        \n        # Send error message to orchestrator\n        self.send_message(\n            \"OrchestratorAgent\",\n            error_info,\n            \"error\"\n        )\n        \n        return error_info\n\n\nclass AgentCapability:\n    \"\"\"Defines capabilities that agents can have.\"\"\"\n    \n    # Extraction capabilities\n    REGEX_EXTRACTION = \"regex_extraction\"\n    LLM_EXTRACTION = \"llm_extraction\"\n    STRUCTURED_EXTRACTION = \"structured_extraction\"\n    \n    # Generation capabilities\n    TEMPLATE_GENERATION = \"template_generation\"\n    LLM_GENERATION = \"llm_generation\"\n    RULE_BASED_GENERATION = \"rule_based_generation\"\n    \n    # Validation capabilities\n    RULE_VALIDATION = \"rule_validation\"\n    INTENT_VALIDATION = \"intent_validation\"\n    STRUCTURAL_VALIDATION = \"structural_validation\"\n    \n    # Transformation capabilities\n    FORMAT_TRANSFORM = \"format_transform\"\n    SCHEMA_TRANSFORM = \"schema_transform\"\n    \n    # Orchestration capabilities\n    PIPELINE_ORCHESTRATION = \"pipeline_orchestration\"\n    PARALLEL_ORCHESTRATION = \"parallel_orchestration\"\n    CONDITIONAL_ORCHESTRATION = \"conditional_orchestration\"\n\n\nclass AgentRegistry:\n    \"\"\"\n    Registry for managing available agents in the system.\n    \n    This registry allows dynamic agent registration and discovery,\n    making the system more extensible.\n    \"\"\"\n    \n    def __init__(self):\n        \"\"\"Initialize the agent registry.\"\"\"\n        self._agents: dict[str, IAgent] = {}\n        self._agents_by_role: dict[AgentRole, list[IAgent]] = {}\n        self._agents_by_capability: dict[str, list[IAgent]] = {}\n    \n    def register(self, agent: IAgent) -> None:\n        \"\"\"\n        Register an agent in the registry.\n        \n        Args:\n            agent: The agent to register\n        \"\"\"\n        self._agents[agent.name] = agent\n        \n        # Index by role\n        if agent.role not in self._agents_by_role:\n            self._agents_by_role[agent.role] = []\n        self._agents_by_role[agent.role].append(agent)\n        \n        # Index by capabilities\n        capabilities = agent.get_capabilities().get(\"capabilities\", {})\n        for capability in capabilities:\n            if capability not in self._agents_by_capability:\n                self._agents_by_capability[capability] = []\n            self._agents_by_capability[capability].append(agent)\n    \n    def get_agent(self, name: str) -> Optional[IAgent]:\n        \"\"\"\n        Get an agent by name.\n        \n        Args:\n            name: The agent name\n            \n        Returns:\n            The agent if found, None otherwise\n        \"\"\"\n        return self._agents.get(name)\n    \n    def get_agents_by_role(self, role: AgentRole) -> list[IAgent]:\n        \"\"\"\n        Get all agents with a specific role.\n        \n        Args:\n            role: The agent role\n            \n        Returns:\n            List of agents with the specified role\n        \"\"\"\n        return self._agents_by_role.get(role, [])\n    \n    def get_agents_by_capability(self, capability: str) -> list[IAgent]:\n        \"\"\"\n        Get all agents with a specific capability.\n        \n        Args:\n            capability: The capability to search for\n            \n        Returns:\n            List of agents with the specified capability\n        \"\"\"\n        return self._agents_by_capability.get(capability, [])\n    \n    def list_agents(self) -> list[dict[str, Any]]:\n        \"\"\"\n        List all registered agents.\n        \n        Returns:\n            List of agent information dictionaries\n        \"\"\"\n        return [agent.get_capabilities() for agent in self._agents.values()]\n\n\n# Global agent registry instance\nagent_registry = AgentRegistry()"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01AL2J8h57p5qPUSLfihjFp5",
+        "type": "tool_result",
+        "content": "File created successfully at: /mnt/d/Common_Resources/irb-ki-summary/app/core/agent_interfaces.py"
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "Write operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I've created the agent_interfaces.py file with standardized interfaces using Protocol classes and improved separation of concerns. Now I should update the multi_agent_system.py to use these new interfaces and make the agents conform to the new standards.",
+        "signature": "EqgDCkYIBxgCKkB3EEQeM5SIF7ZD7dGiGgkHkkwrnVjd7Qf5DXfUMCa9Fr+GzBM+zZ0mx87IUNxu8c5bnWUR52va9SN5gj1lSoCtEgxsPivJDk3sUkOyGBEaDKEWVknJRyJCnoX+TyIwiXzxQHC8k8EDlyIA/SAgSEWejhAn9oAgCvUHmPhvK4I3+bE5dyGmwO7aRuAXyYt2Ko8CrP1JOMuvlKZJdyvbEbumVBfksykhbwBmelyp0X1qfb6+YO0ZNHK+iohuV30TcUWR5A7R3f31K52gDk+iy1Dvl5oXUCAclP8YoJ361YJXsfPbJowPefc4DBNzrayCghUhD/5ldIOit8i+b4j/NaV10VwcwZLplI5W3i4LUzYvlXene2+Lt99G/dJMSiONTq2Yv8oBYfGLVkC7Mu3fLYBugbfoo2UDkC6+HHg6G8yXohlZNaBrC5Rxaojx+Zqs9EK/rGHRvSqfT446hj+XvCh/8iEhC6+YYqOePjlfLIbDA3keYNIyy7pIL2ndxMUyYx9jYBkYwDhdxs6+PBZGAgMrETfVFHO9BBazcgTxbKf60RgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "The user wants me to continue with the refactoring task. I've created the agent_interfaces.py file which defines clear interfaces and protocols for agents. Now I should update the multi_agent_system.py to use these new interfaces and improve the separation of concerns.\n\nLet me refactor the existing agents in multi_agent_system.py to use the new interfaces and base classes.",
+        "signature": "EqAECkYIBxgCKkAaphISJEQrb1Ok3ZVSZx7EH9j8EEEzQi4XfYSwuYUUxEdGDhPXxIMUHUP0A0ht5JkDFrx6doJqLFdgSA1Q/3zgEgz9V18PgwA6BQYQPYQaDBoTh4krRCIWMCKV2SIweIA+JQyUn12O66RC/itUADuMQWhwjmrevsefOPZ5tvd1sqHPcOr5xbRzEuhOydgkKocDKuUBw9TRpLJFDYZyUcCtao0SuFBweTWimUnNZ43230qURnUPjCGGrDtNvnz/FQKO69Rtgq+EraWFYeopjze2UkKk6WQpy6ljJY6Ovtd3YG3q0WUJ5ncuW9oyZQYzN8nEWN2Ni6QoLuqHuto7Qxi6ppAQHKiPAAed0FyVjPL+2LYGoONMiogtaBMpYZ4aaeFWy8pWaqaiD4Jfd87aWDzQvN9JEY3jrv4faGQSeh5KzyqWsmwj3hzu3ipYS5Zby8CGgUjNrfD4Sw3HL/o1baC4t34uu7JqwbJ3t5UG2Sw/wzKBSUKevM3l/7eJRSjiqXVjRx3taULz91SWSAqYAWtOnswfQkd/j0ZPur4biU7cjN1P6czqnwVKDHUtVKf0NBqXLoMDGaX0AFbkel/Hf21cSo88dzS/QbeKs/BS9dZOgjUVu3gkZ88RuFbHw2kyHo0y9CC05bU6L9fuAVutWUZ/efYcYzTfl6AXgJMMfPDAfuGKd/CCLJuEXJXiQVowvjf7jmLmS/1ZchgB"
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01JroBkd9fqQuhrM7vyLq7Pc",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "edits": [
+            {
+              "old_string": "\"\"\"\nMulti-Agent System for Document Generation\nImplements specialized agents with orchestration and validation\n\"\"\"\nfrom abc import ABC, abstractmethod\nfrom typing import Dict, Any, List, Optional, Tuple\nfrom dataclasses import dataclass, field\nimport asyncio\nfrom enum import Enum\nimport json\nimport re\nfrom .exceptions import AgentError, AgentCommunicationError, LLMError",
+              "new_string": "\"\"\"\nMulti-Agent System for Document Generation\nImplements specialized agents with orchestration and validation\n\"\"\"\nfrom typing import Dict, Any, List, Optional, Tuple\nimport asyncio\nimport json\nimport re\nfrom .exceptions import AgentError, AgentCommunicationError, LLMError\nfrom .agent_interfaces import (\n    BaseAgent, AgentRole, AgentContext, AgentMessage,\n    AgentCapability, agent_registry\n)"
+            },
+            {
+              "old_string": "class AgentRole(Enum):\n    \"\"\"Roles that agents can play in the system\"\"\"\n    EXTRACTOR = \"extractor\"  # Extracts information from documents\n    GENERATOR = \"generator\"  # Generates new content\n    VALIDATOR = \"validator\"  # Validates content and intent\n    ROUTER = \"router\"  # Routes tasks to appropriate agents\n    SPECIALIST = \"specialist\"  # Domain-specific specialist\n\n\n@dataclass\nclass AgentMessage:\n    \"\"\"Message passed between agents\"\"\"\n    sender: str\n    recipient: str\n    content: Any\n    message_type: str\n    metadata: Dict[str, Any] = field(default_factory=dict)\n    timestamp: Optional[float] = None\n\n\n@dataclass\nclass AgentContext:\n    \"\"\"Shared context for agent collaboration\"\"\"\n    document_type: str\n    parameters: Dict[str, Any]\n    extracted_values: Dict[str, Any] = field(default_factory=dict)\n    generated_content: Dict[str, str] = field(default_factory=dict)\n    validation_results: Dict[str, Any] = field(default_factory=dict)\n    critical_values: List[str] = field(default_factory=list)\n    messages: List[AgentMessage] = field(default_factory=list)\n\n\nclass BaseAgent(ABC):\n    \"\"\"Base class for all agents in the system\"\"\"\n    \n    def __init__(self, name: str, role: AgentRole):\n        self.name = name\n        self.role = role\n        self.context: Optional[AgentContext] = None\n    \n    @abstractmethod\n    async def process(self, context: AgentContext) -> Dict[str, Any]:\n        \"\"\"Process the context and return results\"\"\"\n        pass\n    \n    def send_message(self, recipient: str, content: Any, message_type: str = \"info\"):\n        \"\"\"Send a message to another agent\"\"\"\n        if self.context:\n            message = AgentMessage(\n                sender=self.name,\n                recipient=recipient,\n                content=content,\n                message_type=message_type\n            )\n            self.context.messages.append(message)\n    \n    def receive_messages(self) -> List[AgentMessage]:\n        \"\"\"Receive messages addressed to this agent\"\"\"\n        if not self.context:\n            return []\n        return [msg for msg in self.context.messages if msg.recipient == self.name]",
+              "new_string": "# AgentRole, AgentMessage, AgentContext, and BaseAgent are now imported from agent_interfaces.py\n# This provides better separation of concerns and cleaner interfaces"
+            },
+            {
+              "old_string": "class ExtractionAgent(BaseAgent):\n    \"\"\"Agent specialized in extracting information from documents\"\"\"\n    \n    def __init__(self, name: str = \"ExtractorAgent\"):\n        super().__init__(name, AgentRole.EXTRACTOR)\n        self.extraction_patterns = {",
+              "new_string": "class ExtractionAgent(BaseAgent):\n    \"\"\"Agent specialized in extracting information from documents.\"\"\"\n    \n    def __init__(self, name: str = \"ExtractorAgent\"):\n        super().__init__(name, AgentRole.EXTRACTOR)\n        self._capabilities = {\n            AgentCapability.REGEX_EXTRACTION: True,\n            AgentCapability.STRUCTURED_EXTRACTION: True\n        }\n        self.extraction_patterns = {"
+            },
+            {
+              "old_string": "    async def process(self, context: AgentContext) -> Dict[str, Any]:\n        \"\"\"Extract key information from document\"\"\"\n        self.context = context\n        extracted = {}\n        \n        # Get document text from parameters\n        doc_text = context.parameters.get(\"document_text\", \"\")",
+              "new_string": "    async def process(self, context: AgentContext) -> dict[str, Any]:\n        \"\"\"Extract key information from document.\"\"\"\n        self.context = context\n        \n        # Validate input\n        if not self.validate_input(context):\n            return {\"error\": \"Invalid context for extraction\"}\n        \n        extracted = {}\n        doc_text = context.parameters.get(\"document_text\", \"\")"
+            },
+            {
+              "old_string": "class GenerationAgent(BaseAgent):\n    \"\"\"Agent specialized in generating content\"\"\"\n    \n    def __init__(self, name: str = \"GeneratorAgent\", llm=None):\n        super().__init__(name, AgentRole.GENERATOR)\n        self.llm = llm",
+              "new_string": "class GenerationAgent(BaseAgent):\n    \"\"\"Agent specialized in generating content using templates or LLM.\"\"\"\n    \n    def __init__(self, name: str = \"GeneratorAgent\", llm=None):\n        super().__init__(name, AgentRole.GENERATOR)\n        self.llm = llm\n        self._capabilities = {\n            AgentCapability.TEMPLATE_GENERATION: True,\n            AgentCapability.LLM_GENERATION: llm is not None\n        }"
+            },
+            {
+              "old_string": "    async def process(self, context: AgentContext) -> Dict[str, Any]:\n        \"\"\"Generate content based on context using LLM\"\"\"\n        self.context = context\n        generated = {}\n        \n        # Generate section content based on extracted values\n        extracted = context.extracted_values",
+              "new_string": "    async def process(self, context: AgentContext) -> dict[str, Any]:\n        \"\"\"Generate content based on context using LLM or templates.\"\"\"\n        self.context = context\n        \n        # Validate input\n        if not self.validate_input(context):\n            return {\"error\": \"Invalid context for generation\"}\n        \n        generated = {}\n        extracted = context.extracted_values"
+            },
+            {
+              "old_string": "class ValidationAgent(BaseAgent):\n    \"\"\"Agent specialized in validation and intent preservation\"\"\"\n    \n    def __init__(self, name: str = \"ValidatorAgent\"):\n        super().__init__(name, AgentRole.VALIDATOR)\n        self.validation_rules = {",
+              "new_string": "class ValidationAgent(BaseAgent):\n    \"\"\"Agent specialized in validation and intent preservation.\"\"\"\n    \n    def __init__(self, name: str = \"ValidatorAgent\"):\n        super().__init__(name, AgentRole.VALIDATOR)\n        self._capabilities = {\n            AgentCapability.RULE_VALIDATION: True,\n            AgentCapability.INTENT_VALIDATION: True,\n            AgentCapability.STRUCTURAL_VALIDATION: True\n        }\n        self.validation_rules = {"
+            },
+            {
+              "old_string": "    async def process(self, context: AgentContext) -> Dict[str, Any]:\n        \"\"\"Validate content and check intent preservation\"\"\"\n        self.context = context\n        results = {",
+              "new_string": "    async def process(self, context: AgentContext) -> dict[str, Any]:\n        \"\"\"Validate content and check intent preservation.\"\"\"\n        self.context = context\n        \n        # Validate input\n        if not self.validate_input(context):\n            return {\"error\": \"Invalid context for validation\"}\n        \n        results = {"
+            },
+            {
+              "old_string": "class OrchestrationAgent(BaseAgent):\n    \"\"\"Agent that orchestrates other agents\"\"\"\n    \n    def __init__(self, name: str = \"OrchestratorAgent\"):",
+              "new_string": "class OrchestrationAgent(BaseAgent):\n    \"\"\"Agent that orchestrates other agents in a pipeline.\"\"\"\n    \n    def __init__(self, name: str = \"OrchestratorAgent\"):"
+            },
+            {
+              "old_string": "        super().__init__(name, AgentRole.ROUTER)",
+              "new_string": "        super().__init__(name, AgentRole.ORCHESTRATOR)\n        self._capabilities = {\n            AgentCapability.PIPELINE_ORCHESTRATION: True,\n            AgentCapability.PARALLEL_ORCHESTRATION: True\n        }"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01JroBkd9fqQuhrM7vyLq7Pc",
+        "type": "tool_result",
+        "content": "Applied 10 edits to /mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py:\n1. Replaced \"\"\"\"\nMulti-Agent System for Document Generation\nImp...\" with \"\"\"\"\nMulti-Agent System for Document Generation\nImp...\"\n2. Replaced \"class AgentRole(Enum):\n    \"\"\"Roles that agents ca...\" with \"# AgentRole, AgentMessage, AgentContext, and BaseA...\"\n3. Replaced \"class ExtractionAgent(BaseAgent):\n    \"\"\"Agent spe...\" with \"class ExtractionAgent(BaseAgent):\n    \"\"\"Agent spe...\"\n4. Replaced \"    async def process(self, context: AgentContext)...\" with \"    async def process(self, context: AgentContext)...\"\n5. Replaced \"class GenerationAgent(BaseAgent):\n    \"\"\"Agent spe...\" with \"class GenerationAgent(BaseAgent):\n    \"\"\"Agent spe...\"\n6. Replaced \"    async def process(self, context: AgentContext)...\" with \"    async def process(self, context: AgentContext)...\"\n7. Replaced \"class ValidationAgent(BaseAgent):\n    \"\"\"Agent spe...\" with \"class ValidationAgent(BaseAgent):\n    \"\"\"Agent spe...\"\n8. Replaced \"    async def process(self, context: AgentContext)...\" with \"    async def process(self, context: AgentContext)...\"\n9. Replaced \"class OrchestrationAgent(BaseAgent):\n    \"\"\"Agent ...\" with \"class OrchestrationAgent(BaseAgent):\n    \"\"\"Agent ...\"\n10. Replaced \"        super().__init__(name, AgentRole.ROUTER)\" with \"        super().__init__(name, AgentRole.ORCHESTRA...\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I've successfully created the agent_interfaces.py file and updated the multi_agent_system.py to use the new standardized interfaces. Now I should:\n\n1. Complete the refactoring of the remaining parts of multi_agent_system.py\n2. Test the changes to ensure everything still works\n3. Update the todo list\n\nLet me continue with the refactoring and then test it.",
+        "signature": "Eo4ECkYIBxgCKkDv++GAhK2t9NMuzh9IYt4yUjCDBNAtzOe10dJ1402eeLHZRr3EIag5F4clT6EstlcTmQV0ODPdO88D55qJOHMsEgwwq4QumcvAg6eQ3vEaDBM0ToK5sMYvhH1qRCIwlxOC1xY++fLEiPlglkOCkWttLAHs/7vM3YHPQRyYGwAyfbrfxsFo+5Ele3YuLisSKvUCqdZXpLlvVcBbMqV031oK4xmn7xTQNiWn5q9k0qozW92lF3X30gFutZRBU+B1sX9+apdQ3UEsEkw0Pm9wwclJXvUv1/7sB96FXgCd42zXWqdSAyFboyLdH38zRfzpc73C7X0LlY1K/kMm9E1Sg0T3GA/iRxdvaazsLpWLySdJO5Z3HNjhQJ+sfVOtiVeLyJWlAjxr8CnZMxzGtgpLNKjlpI+vU2N2dLlvQZF4DxcBqnrvytM1Nth1wq5TObhhslaPKKcXPxfBQiEOYyG2DUIUpo4+C5nUnrtD617D5X+RwXgJD4L3aZnq5KThMR6mkV4cg7st1eyHuHDsX3gkLl7p7n+L8fxybt3fQwOLmvxrvRflqaDcgt1yUZMk24HgoJjF2CPYcAupGsCK7ARtPh+HQTVqgS4cThN95cH/8yt+AMdaMceabHzOyBJg6LDjQWgyjWmzKfwKebuEZnMnvNcpEPnNtTEUGxf5x3n7w1Y9RLGlrmc6ABgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01FpJ9TRyKx4GV13cnPzGA46",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "offset": 245,
+          "limit": 100
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01FpJ9TRyKx4GV13cnPzGA46",
+        "type": "tool_result",
+        "content": "   245→            # Small delay to simulate processing\n   246→            await asyncio.sleep(0.1)\n   247→        \n   248→        return results\n   249→\n   250→\n   251→class SpecialistAgent(BaseAgent):\n   252→    \"\"\"Base class for domain-specific specialist agents\"\"\"\n   253→    \n   254→    def __init__(self, name: str, specialty: str):\n   255→        super().__init__(name, AgentRole.SPECIALIST)\n   256→        self.specialty = specialty\n   257→    \n   258→    async def process(self, context: AgentContext) -> Dict[str, Any]:\n   259→        \"\"\"Process document based on specialty\"\"\"\n   260→        self.context = context\n   261→        \n   262→        # Base implementation for specialist agents\n   263→        results = {\n   264→            \"specialty\": self.specialty,\n   265→            \"processed\": True,\n   266→            \"recommendations\": []\n   267→        }\n   268→        \n   269→        # Template selection specialty\n   270→        if self.specialty == \"template_selection\":\n   271→            templates = context.parameters.get(\"available_templates\", {})\n   272→            regulatory_section = context.parameters.get(\"regulatory_section\", \"device\")\n   273→            therapeutic_area = context.parameters.get(\"therapeutic_area\", \"\")\n   274→            \n   275→            selected_template = f\"{regulatory_section}_{therapeutic_area}\" if therapeutic_area else regulatory_section\n   276→            results[\"selected_template\"] = selected_template\n   277→            results[\"recommendations\"].append(f\"Selected template: {selected_template}\")\n   278→        \n   279→        # Sub-template selection specialty\n   280→        elif self.specialty == \"sub_template_selection\":\n   281→            study_phase = context.parameters.get(\"study_phase\", \"\")\n   282→            study_design = context.parameters.get(\"study_design\", \"\")\n   283→            \n   284→            sub_templates = []\n   285→            if study_phase:\n   286→                sub_templates.append(f\"phase_{study_phase}\")\n   287→            if study_design:\n   288→                sub_templates.append(f\"design_{study_design}\")\n   289→            \n   290→            results[\"selected_sub_templates\"] = sub_templates\n   291→            results[\"recommendations\"].append(f\"Selected sub-templates: {', '.join(sub_templates)}\")\n   292→        \n   293→        # Default specialty processing\n   294→        else:\n   295→            results[\"recommendations\"].append(f\"Processing with {self.specialty} specialty\")\n   296→        \n   297→        return results\n   298→\n   299→\n   300→class ClinicalProtocolAgent(SpecialistAgent):\n   301→    \"\"\"Specialist agent for clinical protocol documents\"\"\"\n   302→    \n   303→    def __init__(self):\n   304→        super().__init__(\"ClinicalProtocolAgent\", \"clinical_protocol\")\n   305→        self.sub_templates = {\n   306→            \"device\": [\"safety\", \"efficacy\", \"fda_requirements\"],\n   307→            \"drug\": [\"pharmacology\", \"dosing\", \"adverse_events\"],\n   308→            \"biologic\": [\"immunogenicity\", \"administration\", \"storage\"]\n   309→        }\n   310→    \n   311→    async def process(self, context: AgentContext) -> Dict[str, Any]:\n   312→        \"\"\"Process clinical protocol specific requirements\"\"\"\n   313→        self.context = context\n   314→        results = {}\n   315→        \n   316→        # Determine sub-template based on study type\n   317→        study_object = context.extracted_values.get(\"study_object\", \"\").lower()\n   318→        \n   319→        if \"device\" in study_object:\n   320→            template_type = \"device\"\n   321→        elif \"drug\" in study_object or \"medication\" in study_object:\n   322→            template_type = \"drug\"\n   323→        elif \"biologic\" in study_object or \"vaccine\" in study_object:\n   324→            template_type = \"biologic\"\n   325→        else:\n   326→            template_type = \"drug\"  # Default\n   327→        \n   328→        results[\"template_type\"] = template_type\n   329→        results[\"required_sections\"] = self.sub_templates[template_type]\n   330→        \n   331→        # Add to context\n   332→        context.parameters[\"clinical_template_type\"] = template_type\n   333→        \n   334→        return results\n   335→\n   336→\n   337→class IntentPreservationAgent(BaseAgent):\n   338→    \"\"\"Agent focused on preserving original intent in generated content\"\"\"\n   339→    \n   340→    def __init__(self):\n   341→        super().__init__(\"IntentPreservationAgent\", AgentRole.VALIDATOR)\n   342→        self.semantic_equivalents = {\n   343→            \"study\": [\"research\", \"trial\", \"investigation\", \"protocol\"],\n   344→            \"participant\": [\"subject\", \"patient\", \"volunteer\"],\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to continue updating the multi_agent_system.py file to use the new interfaces. Let me continue with the SpecialistAgent and other remaining agents.",
+        "signature": "EsQCCkYIBxgCKkCwn1fdTydbPw74+KRISiTe4wct2yJfl7WegUTnIUBQbHov86cM2b1yqizXyeRy5rvXRvLdbpGtBx70C5W9v3lwEgyDnZEXPzR7cowIeqAaDGw/NiMScheHbUNEOSIwWpS00lhQ5WsM7DXnFQm5DqjTGoRiXLITHZ2WKXdcbkfFdASBMX2Zf0FcC2B/d+ZtKqsBJgscl9XgA24Ep44NXw1i19Z9axllZMMuvFmM4MwpeboPzZxOWOQ7DbYzm8F1BqIXpvWTKoyEUg05cPZ2K4YpiH//h9FKkjWbitReo47N2+LKzSIIjN3NejZJEpSI/IZUbHE0CnZ/PF3iwV67BnXfOf/Ed0PLizotK/gYQUrIJxBwqUxuErTYRH/XvHspsph95C5hZOn0ooY4TRew7kVOjVpXDUuOr8+lg+WEGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01HQRHovU2YC7RJRVGmL61ZV",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "edits": [
+            {
+              "old_string": "class SpecialistAgent(BaseAgent):\n    \"\"\"Base class for domain-specific specialist agents\"\"\"\n    \n    def __init__(self, name: str, specialty: str):\n        super().__init__(name, AgentRole.SPECIALIST)\n        self.specialty = specialty\n    \n    async def process(self, context: AgentContext) -> Dict[str, Any]:",
+              "new_string": "class SpecialistAgent(BaseAgent):\n    \"\"\"Base class for domain-specific specialist agents.\"\"\"\n    \n    def __init__(self, name: str, specialty: str):\n        super().__init__(name, AgentRole.SPECIALIST)\n        self.specialty = specialty\n        self._capabilities = {\n            f\"specialty_{specialty}\": True\n        }\n    \n    async def process(self, context: AgentContext) -> dict[str, Any]:"
+            },
+            {
+              "old_string": "    async def process(self, context: AgentContext) -> Dict[str, Any]:\n        \"\"\"Process clinical protocol specific requirements\"\"\"\n        self.context = context\n        results = {}",
+              "new_string": "    async def process(self, context: AgentContext) -> dict[str, Any]:\n        \"\"\"Process clinical protocol specific requirements.\"\"\"\n        self.context = context\n        \n        # Validate input\n        if not self.validate_input(context):\n            return {\"error\": \"Invalid context for clinical protocol processing\"}\n        \n        results = {}"
+            },
+            {
+              "old_string": "class IntentPreservationAgent(BaseAgent):\n    \"\"\"Agent focused on preserving original intent in generated content\"\"\"\n    \n    def __init__(self):\n        super().__init__(\"IntentPreservationAgent\", AgentRole.VALIDATOR)",
+              "new_string": "class IntentPreservationAgent(BaseAgent):\n    \"\"\"Agent focused on preserving original intent in generated content.\"\"\"\n    \n    def __init__(self):\n        super().__init__(\"IntentPreservationAgent\", AgentRole.VALIDATOR)\n        self._capabilities = {\n            AgentCapability.INTENT_VALIDATION: True\n        }"
+            },
+            {
+              "old_string": "    async def process(self, context: AgentContext) -> Dict[str, Any]:\n        \"\"\"Check that original intent is preserved\"\"\"\n        self.context = context\n        results = {",
+              "new_string": "    async def process(self, context: AgentContext) -> dict[str, Any]:\n        \"\"\"Check that original intent is preserved in generated content.\"\"\"\n        self.context = context\n        \n        # Validate input\n        if not self.validate_input(context):\n            return {\"error\": \"Invalid context for intent preservation\"}\n        \n        results = {"
+            },
+            {
+              "old_string": "class MultiAgentPool:\n    \"\"\"Pool of agents for collaborative document processing\"\"\"\n    \n    def __init__(self, llm=None):\n        self.agents = {}",
+              "new_string": "class MultiAgentPool:\n    \"\"\"Pool of agents for collaborative document processing.\"\"\"\n    \n    def __init__(self, llm=None):\n        \"\"\"Initialize the agent pool with optional LLM support.\"\"\"\n        self.agents = {}"
+            },
+            {
+              "old_string": "        # Register the agent\n        self.agents[agent.name] = agent\n    \n    async def orchestrate(self, agents: List[BaseAgent], parameters: Dict[str, Any]) -> Dict[str, Any]:",
+              "new_string": "        # Register the agent\n        self.agents[agent.name] = agent\n        # Also register in global registry\n        agent_registry.register(agent)\n    \n    async def orchestrate(self, agents: list[BaseAgent], parameters: dict[str, Any]) -> dict[str, Any]:"
+            },
+            {
+              "old_string": "        \"\"\"Orchestrate a pipeline of agents to process document\"\"\"\n        context = AgentContext(",
+              "new_string": "        \"\"\"Orchestrate a pipeline of agents to process document.\"\"\"\n        context = AgentContext("
+            },
+            {
+              "old_string": "            # Process through each agent in sequence\n            for agent in agents:\n                try:\n                    results = await agent.process(context)\n                    \n                    # Store results based on agent role\n                    if agent.role == AgentRole.EXTRACTOR:",
+              "new_string": "            # Process through each agent in sequence\n            for agent in agents:\n                try:\n                    # Validate agent can process this context\n                    if not agent.validate_input(context):\n                        error_msg = f\"Agent {agent.name} cannot process context\"\n                        all_results[\"errors\"].append(error_msg)\n                        continue\n                    \n                    results = await agent.process(context)\n                    \n                    # Store results based on agent role\n                    if agent.role == AgentRole.EXTRACTOR:"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "content": "<tool_use_error>String to replace not found in file.\nString:     async def process(self, context: AgentContext) -> Dict[str, Any]:\n        \"\"\"Check that original intent is preserved\"\"\"\n        self.context = context\n        results = {</tool_use_error>",
+        "is_error": true,
+        "tool_use_id": "toolu_01HQRHovU2YC7RJRVGmL61ZV"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me search for the exact text for IntentPreservationAgent's process method.",
+        "signature": "EvcBCkYIBxgCKkBr8rLc8H2xw/S/AjEp3ah0qagUjZmALeAd7hFWPsBNN7KtGAbT+g2bUWC/q0vUAFO/K4GGaffTQgMY2MSGcAI9EgxiP9MP9eQ6lTzbr+saDPlgdk7kc0khPvFOYCIwxyGnQLGfHn3LazBi/9dxHcNB/nQuvyrYdiqO3M5G8oK901xpGJxChLEnuWjczw1FKl9QguT5WKRdThqa1EP6fpUJ0DsASlba2Frcb8eUmH4DHEso8NRQ5Uoo8aFUB/21eFzuU/RHUofPDkPt5Mk82LVSbYkGlrO123EQVGbMoUCUc1Kxf0idER+Os5xcgH90yRgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01XFzgHAVtSRkPKjhPiRWN8x",
+        "name": "Grep",
+        "input": {
+          "pattern": "async def process.*Check that original",
+          "path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "output_mode": "content",
+          "-n": true,
+          "-A": 3
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01XFzgHAVtSRkPKjhPiRWN8x",
+        "type": "tool_result",
+        "content": "No matches found"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me read more of the file to find the IntentPreservationAgent's process method.",
+        "signature": "EvoBCkYIBxgCKkDO9/vc3MkCkJciGWan2tB7E9E0Dtu+tL1PYZfZlbA8p/ZCCgUH0+AiVGYRYsvM8uCu9l7F37sMRIgECKYzFqgsEgwkckWrPI5GAakAB68aDAJcgPxFJ0iHNuQmbyIwAB43RbhGyo1PslrFBESRpPfumDG6EPRV+V7jM93dA5HKdCFhZ2u82QR7h8GqJnaIKmId7rMnF2wza/A2ixnFEjdr06WapwD/rbPh2xX/oYzIlp9KO7zAt7ZnFpLgGYsfNgf/pdNtn5/pDHT/m1Flv1awzK0jqeUczaopfINh5AWXG2FAuErjdQdLcbA95+ECNv3Y7hgB"
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01HZfqGht3Sc5SDwibtQ8i3Q",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "offset": 345,
+          "limit": 60
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01HZfqGht3Sc5SDwibtQ8i3Q",
+        "type": "tool_result",
+        "content": "   345→            \"risk\": [\"hazard\", \"danger\", \"adverse event\", \"side effect\"],\n   346→            \"benefit\": [\"advantage\", \"improvement\", \"positive outcome\"]\n   347→        }\n   348→    \n   349→    async def process(self, context: AgentContext) -> Dict[str, Any]:\n   350→        \"\"\"Check semantic intent preservation\"\"\"\n   351→        self.context = context\n   352→        results = {\n   353→            \"semantic_preservation\": {},\n   354→            \"recommendations\": []\n   355→        }\n   356→        \n   357→        # Check each critical value\n   358→        for field in context.critical_values:\n   359→            if field in context.extracted_values:\n   360→                original = str(context.extracted_values[field])\n   361→                \n   362→                # Check for semantic equivalents\n   363→                preserved = False\n   364→                for content in context.generated_content.values():\n   365→                    content_str = str(content).lower()\n   366→                    \n   367→                    # Direct match\n   368→                    if original.lower() in content_str:\n   369→                        preserved = True\n   370→                        break\n   371→                    \n   372→                    # Semantic equivalent match\n   373→                    for key_term in original.lower().split():\n   374→                        if key_term in self.semantic_equivalents:\n   375→                            for equivalent in self.semantic_equivalents[key_term]:\n   376→                                if equivalent in content_str:\n   377→                                    preserved = True\n   378→                                    break\n   379→                \n   380→                results[\"semantic_preservation\"][field] = preserved\n   381→                \n   382→                if not preserved:\n   383→                    results[\"recommendations\"].append(\n   384→                        f\"Consider adding '{original}' or its equivalent to preserve intent for {field}\"\n   385→                    )\n   386→        \n   387→        return results\n   388→\n   389→\n   390→class MultiAgentPool:\n   391→    \"\"\"Enhanced pool for managing multiple agents\"\"\"\n   392→    \n   393→    def __init__(self, llm=None):\n   394→        self.agents: Dict[str, BaseAgent] = {}\n   395→        self.llm = llm\n   396→        self.orchestrator = OrchestrationAgent()\n   397→        self._initialize_default_agents()\n   398→    \n   399→    def _initialize_default_agents(self):\n   400→        \"\"\"Initialize default agents\"\"\"\n   401→        # Core agents\n   402→        self.register_agent(ExtractionAgent())\n   403→        self.register_agent(GenerationAgent(llm=self.llm))  # Pass LLM to generation agent\n   404→        self.register_agent(ValidationAgent())\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now I can see the IntentPreservationAgent's process method. Let me continue with the updates.",
+        "signature": "EoYCCkYIBxgCKkAbSyH6xNTPr6dBd3ApgGNglX9bb2JVrWsmKI20islErVdzwYzwYzwyOya0BR8kN2tg2SnRvbttewWaIKfL2vLnEgxN5kvV7lnoAGUkGigaDBqQf6+y+sNMhAQUxSIwZVgmSN9v66S3vVqTCqH/jNabSgyraQVUnaCC7c+exhVbfgAIhzA9evLsKpWPa+vGKm4ycxDNjZG1SJfAqKmOEeaUX6XI2nNNV7dQjh7uzUtsWHngtQwcEd76EJV9RXEW8iyl9SXL1XWomLooyVKfZjF4oX+qhKzBxGU1NGzVZGFyKDLF0eiif7bdpodEyiErl1xgJb+RcRxVb80n1FIEoBgB"
+      }
+    ]
+  }
+]

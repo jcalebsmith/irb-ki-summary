@@ -1,0 +1,118 @@
+{% extends "clinical-protocol/master-protocol.j2" %}
+
+{% block title %}
+INVESTIGATIONAL NEW DRUG (IND) PROTOCOL
+{{ study_name | upper }}
+IND Number: {{ ind_number | default("PENDING") }}
+Protocol Number: {{ protocol_number }}
+{% endblock %}
+
+{% block content %}
+{{ super() }}
+
+## DRUG-SPECIFIC SECTIONS
+
+### A. INVESTIGATIONAL DRUG INFORMATION
+
+#### Drug Name
+{{ drug_name }} ({{ drug_generic_name | default("generic name pending") }})
+
+#### Drug Classification
+{{ drug_classification | default("Pharmacologic class to be determined") }}
+
+#### Formulation
+{{ drug_formulation | default("Tablet, capsule, or solution as appropriate") }}
+
+#### Route of Administration
+{{ route_of_administration | default("Oral") }}
+
+#### Dosing Regimen
+{{ dosing_regimen | default("Dose and frequency to be specified") }}
+
+### B. PHARMACOLOGY
+
+#### Mechanism of Action
+{{ drug_mechanism | default("The investigational drug acts by...") }}
+
+#### Pharmacokinetics
+{{ pharmacokinetics | default("Absorption, distribution, metabolism, and excretion characteristics...") }}
+
+#### Pharmacodynamics
+{{ pharmacodynamics | default("Drug effects and dose-response relationships...") }}
+
+### C. NONCLINICAL STUDIES
+
+#### Toxicology Studies
+{{ toxicology_summary | default("Toxicology studies in animals have shown...") }}
+
+#### Genotoxicity
+{{ genotoxicity_summary | default("Genotoxicity testing results...") }}
+
+#### Carcinogenicity
+{{ carcinogenicity_summary | default("Carcinogenicity studies (if applicable)...") }}
+
+#### Reproductive Toxicology
+{{ reproductive_tox_summary | default("Effects on fertility and reproduction...") }}
+
+### D. CLINICAL PHARMACOLOGY
+
+#### Prior Human Experience
+{{ prior_human_experience | default("Previous clinical studies have demonstrated...") }}
+
+#### Dose Rationale
+{{ dose_rationale | default("The selected dose is based on...") }}
+
+#### Drug-Drug Interactions
+{{ drug_interactions | default("Potential interactions with concomitant medications...") }}
+
+### E. DRUG MANUFACTURING
+
+#### Drug Substance
+{{ drug_substance_info | default("Active pharmaceutical ingredient information") }}
+
+#### Drug Product
+{{ drug_product_info | default("Finished dosage form specifications") }}
+
+#### Stability
+{{ stability_data | default("Stability studies support expiration dating of...") }}
+
+#### Supply and Distribution
+{{ drug_supply | default("Study drug will be supplied by sponsor") }}
+
+### F. DRUG ADMINISTRATION AND ACCOUNTABILITY
+
+#### Drug Storage
+{{ drug_storage | default("Store at 2-8°C, protect from light") }}
+
+#### Drug Preparation
+{{ drug_preparation | default("No preparation required" if route_of_administration == "Oral" else "Preparation instructions...") }}
+
+#### Drug Accountability
+All study drug dispensed and returned will be documented in drug accountability logs.
+
+#### Drug Compliance
+{{ compliance_monitoring | default("Compliance will be assessed by pill count and patient diary") }}
+
+### G. CONCOMITANT MEDICATIONS
+
+#### Prohibited Medications
+{{ prohibited_meds | default("The following medications are prohibited during the study...") }}
+
+#### Allowed Medications
+{{ allowed_meds | default("Stable doses of chronic medications are permitted") }}
+
+#### Rescue Medications
+{{ rescue_meds | default("Rescue medications for symptom management...") }}
+
+### H. PHARMACOVIGILANCE
+
+#### Serious Adverse Event Reporting
+SAEs will be reported to FDA within 15 calendar days (7 days for fatal/life-threatening).
+
+#### Suspected Unexpected Serious Adverse Reactions (SUSARs)
+SUSARs will be reported per FDA IND safety reporting requirements.
+
+#### Pregnancy Reporting
+{{ pregnancy_reporting | default("Pregnancies occurring during the study will be followed to outcome") }}
+
+{% endblock %}

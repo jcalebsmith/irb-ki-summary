@@ -1,0 +1,233 @@
+"""
+Pydantic models for structured extraction
+Defines strongly-typed models for extracting information from documents
+"""
+from pydantic import BaseModel, Field
+from typing import Optional, List, Literal
+from enum import Enum
+
+
+class StudyType(str, Enum):
+    """Types of studies"""
+    STUDYING = "studying"
+    COLLECTING = "collecting"
+
+
+class ArticleType(str, Enum):
+    """Article types for study objects"""
+    A = "a "
+    A_NEW = "a new "
+    NONE = ""
+
+
+class PopulationType(str, Enum):
+    """Population types for studies"""
+    PEOPLE = "people"
+    LARGE_NUMBERS_PEOPLE = "large numbers of people"
+    SMALL_NUMBERS_PEOPLE = "small numbers of people"
+    CHILDREN = "children"
+    LARGE_NUMBERS_CHILDREN = "large numbers of children"
+    SMALL_NUMBERS_CHILDREN = "small numbers of children"
+
+
+class KIExtractionSchema(BaseModel):
+    """
+    Schema for extracting Key Information from Informed Consent documents
+    All fields have strict validation and word limits
+    """
+    # Section 1 - Eligibility
+    is_pediatric: bool = Field(
+        default=False,
+        description="Are children eligible to participate? Look for age requirements, pediatric participants, or parent/guardian consent."
+    )
+    
+    # Section 4 - Study Description  
+    study_type: StudyType = Field(
+        default=StudyType.STUDYING,
+        description="Is this study primarily studying/testing something or collecting/gathering something?"
+    )
+    
+    article: ArticleType = Field(
+        default=ArticleType.A,
+        description="What article should precede the study object? 'a ' for existing, 'a new ' for novel, '' for plural/uncountable"
+    )
+    
+    study_object: str = Field(
+        default="intervention",
+        max_length=150,
+        description="Main object being studied (e.g., drug, device, procedure). Include FDA status if mentioned. Lowercase. Max 30 words."
+    )
+    
+    population: PopulationType = Field(
+        default=PopulationType.PEOPLE,
+        description="What population will participate?"
+    )
+    
+    study_purpose: str = Field(
+        default="to evaluate effectiveness",
+        max_length=100,
+        description="Main purpose of study in 10-15 words. Simple language, no intro phrases."
+    )
+    
+    study_goals: str = Field(
+        default="to gather data",
+        max_length=100,
+        description="What study will accomplish in 10-15 words. Simple language, direct statement."
+    )
+    
+    # Section 5 - Randomization and Washout
+    has_randomization: bool = Field(
+        default=False,
+        description="Does document contain words 'randomize', 'randomization', or 'randomized'?"
+    )
+    
+    requires_washout: bool = Field(
+        default=False,
+        description="Does study require stopping medications before/during participation?"
+    )
+    
+    # Section 6 - Risks
+    key_risks: str = Field(
+        default="standard medical risks",
+        max_length=150,
+        description="2-3 most important risks from study (not standard care). Focus on pain/distress. 30 words max."
+    )
+    
+    # Section 7 - Benefits
+    has_direct_benefits: bool = Field(
+        default=False,
+        description="Are there meaningful direct personal benefits to participants?"
+    )
+    
+    benefit_description: str = Field(
+        default="helping advance medical knowledge",
+        max_length=100,
+        description="Benefits summary to complete 'by [text]'. Don't include 'by'. 20 words max."
+    )
+    
+    # Section 8 - Duration
+    study_duration: str = Field(
+        default="the study period",
+        max_length=50,
+        description="How long participants will be in study (e.g., '6 months', 'up to 2 years'). 10 words max."
+    )
+    
+    # Section 9 - Alternatives
+    affects_treatment: bool = Field(
+        default=False,
+        description="Does participation affect current/future treatment options?"
+    )
+    
+    alternative_options: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="Treatment alternatives if study affects options. 20 words max."
+    )
+    
+    # Additional fields
+    collects_biospecimens: bool = Field(
+        default=False,
+        description="Will biological specimens (blood, tissue, DNA, etc.) be collected?"
+    )
+    
+    biospecimen_details: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="Brief statement about what specimens will be collected. 20 words max."
+    )
+
+
+class ClinicalProtocolExtractionSchema(BaseModel):
+    """
+    Schema for extracting information from Clinical Protocol documents
+    """
+    protocol_title: str = Field(
+        description="Full title of the clinical protocol"
+    )
+    
+    protocol_number: str = Field(
+        description="Protocol number or identifier"
+    )
+    
+    sponsor: str = Field(
+        description="Study sponsor organization"
+    )
+    
+    phase: Optional[str] = Field(
+        default=None,
+        description="Clinical trial phase (e.g., Phase 1, Phase 2, Phase 3)"
+    )
+    
+    primary_endpoint: str = Field(
+        description="Primary study endpoint"
+    )
+    
+    secondary_endpoints: List[str] = Field(
+        default_factory=list,
+        description="List of secondary endpoints"
+    )
+    
+    inclusion_criteria: List[str] = Field(
+        default_factory=list,
+        description="Key inclusion criteria"
+    )
+    
+    exclusion_criteria: List[str] = Field(
+        default_factory=list,
+        description="Key exclusion criteria"
+    )
+    
+    study_design: str = Field(
+        description="Study design (e.g., randomized, double-blind, placebo-controlled)"
+    )
+    
+    sample_size: Optional[int] = Field(
+        default=None,
+        description="Target sample size"
+    )
+    
+    study_duration: str = Field(
+        description="Total study duration"
+    )
+    
+    regulatory_section: Literal["device", "drug", "biologic"] = Field(
+        description="Type of regulatory section"
+    )
+    
+    therapeutic_area: str = Field(
+        description="Therapeutic area (e.g., cardiovascular, oncology)"
+    )
+
+
+class GenericExtractionSchema(BaseModel):
+    """
+    Generic schema for document extraction when specific schema is not available
+    """
+    title: Optional[str] = Field(
+        default=None,
+        description="Document title if present"
+    )
+    
+    summary: str = Field(
+        description="Brief summary of the document"
+    )
+    
+    key_points: List[str] = Field(
+        default_factory=list,
+        description="Key points extracted from the document"
+    )
+    
+    entities: List[str] = Field(
+        default_factory=list,
+        description="Important entities mentioned (people, organizations, etc.)"
+    )
+    
+    dates: List[str] = Field(
+        default_factory=list,
+        description="Important dates mentioned"
+    )
+    
+    numbers: List[str] = Field(
+        default_factory=list,
+        description="Important numbers or statistics mentioned"
+    )

@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "created": "2025-09-02T10:00:00Z",
+  "updated": "2025-09-02T10:00:00Z",
+  "description": "Persistent memory layer configuration for Claude Sessions",
+  "settings": {
+    "decay_lambda": 0.1,
+    "decay_enabled": true,
+    "max_memory_size_mb": 10,
+    "max_episodes": 1000,
+    "max_entities": 5000,
+    "confidence_threshold": 0.5,
+    "relevance_threshold": 0.3
+  },
+  "schema": {
+    "memory_types": ["procedural", "episodic", "semantic"],
+    "entity_types": ["user_preference", "codebase_artifact", "pattern", "bug_solution", "workflow"],
+    "relation_types": ["depends_on", "implements", "conflicts_with", "similar_to", "replaces"],
+    "observation_fields": ["content", "timestamp", "confidence", "source", "tags", "access_count", "last_accessed"],
+    "episode_fields": ["id", "task", "timestamp", "learnings", "patterns_detected", "entities_affected", "success"]
+  },
+  "privacy": {
+    "forbidden_patterns": [
+      "password", "api_key", "secret", "token", "credential",
+      "AWS_", "OPENAI_", "ANTHROPIC_", "GITHUB_TOKEN"
+    ],
+    "purge_after_days": 90,
+    "anonymize_sensitive": true
+  }
+}

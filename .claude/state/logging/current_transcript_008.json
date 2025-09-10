@@ -1,0 +1,675 @@
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01PrJKAvPKiNqLRyn18wGnGQ",
+        "type": "tool_result",
+        "content": "    90→            \n    91→        except Exception as e:\n    92→            print(f\"Structured extraction error: {e}\")\n    93→            # Return default instance on error\n    94→            return output_cls()\n    95→    \n    96→    async def extract_json(self, \n    97→                          document_context: str,\n    98→                          extraction_schema: Dict[str, Any],\n    99→                          system_prompt: str = None) -> Dict[str, Any]:\n   100→        \"\"\"\n   101→        Legacy JSON extraction - now uses structured extraction internally\n   102→        \n   103→        Args:\n   104→            document_context: Document text to extract from\n   105→            extraction_schema: Dictionary describing what to extract\n   106→            system_prompt: Optional custom system prompt\n   107→            \n   108→        Returns:\n   109→            Dictionary with extracted values\n   110→        \"\"\"\n   111→        # Check if we have a Pydantic model available\n   112→        from app.core.extraction_models import KIExtractionSchema\n   113→        \n   114→        # For KI extraction, use the Pydantic model\n   115→        if \"is_pediatric\" in extraction_schema and \"study_type\" in extraction_schema:\n   116→            try:\n   117→                result = await self.extract_structured(\n   118→                    document_context=document_context,\n   119→                    output_cls=KIExtractionSchema,\n   120→                    system_prompt=system_prompt\n   121→                )\n   122→                # Convert Pydantic model to dict\n   123→                return result.model_dump()\n   124→            except Exception as e:\n   125→                print(f\"Structured extraction failed, falling back: {e}\")\n   126→        \n   127→        # Fallback to old method for other schemas\n   128→        try:\n   129→            # Build system prompt\n   130→            if not system_prompt:\n   131→                system_prompt = (\n   132→                    \"You are an expert at extracting structured information from documents. \"\n   133→                    \"Extract the requested information accurately and concisely. \"\n   134→                    \"Return a valid JSON object with all requested fields.\"\n   135→                )\n   136→            \n   137→            # Build user prompt with schema\n   138→            user_prompt = (\n   139→                f\"Extract the following information from this document:\\n\\n\"\n   140→                f\"Required fields:\\n{json.dumps(extraction_schema, indent=2)}\\n\\n\"\n   141→                f\"Document:\\n{document_context[:8000]}\"\n   142→            )\n   143→            \n   144→            messages = [\n   145→                ChatMessage(role=\"system\", content=system_prompt),\n   146→                ChatMessage(role=\"user\", content=user_prompt)\n   147→            ]\n   148→            \n   149→            # Use LlamaIndex LLM for chat completion\n   150→            response = self.llm.chat(messages)\n   151→            \n   152→            # Parse response\n   153→            response_text = response.message.content\n   154→            # Try to extract JSON from the response\n   155→            try:\n   156→                result = json.loads(response_text)\n   157→            except json.JSONDecodeError:\n   158→                # Try to find JSON in the response\n   159→                import re\n   160→                json_match = re.search(r'\\{.*\\}', response_text, re.DOTALL)\n   161→                if json_match:\n   162→                    result = json.loads(json_match.group())\n   163→                else:\n   164→                    print(f\"Could not parse JSON from response: {response_text[:200]}\")\n   165→                    return {\"error\": \"Failed to parse JSON\"}\n   166→            \n   167→            return result\n   168→            \n   169→        except Exception as e:\n   170→            print(f\"Extraction error: {e}\")\n   171→            return {\"error\": str(e)}\n   172→    \n   173→    async def extract_text(self, \n   174→                          document_context: str,\n   175→                          query: str,\n   176→                          max_words: int = 50) -> str:\n   177→        \"\"\"\n   178→        Extract specific text based on a query\n   179→        \n   180→        Args:\n   181→            document_context: Document to extract from\n   182→            query: What to extract\n   183→            max_words: Maximum words in response\n   184→            \n   185→        Returns:\n   186→            Extracted text string\n   187→        \"\"\"\n   188→        try:\n   189→            messages = [\n   190→                ChatMessage(\n   191→                    role=\"system\",\n   192→                    content=f\"Extract the requested information in {max_words} words or less.\"\n   193→                ),\n   194→                ChatMessage(\n   195→                    role=\"user\",\n   196→                    content=f\"{query}\\n\\nDocument:\\n{document_context[:4000]}\"\n   197→                )\n   198→            ]\n   199→            \n   200→            # Use LlamaIndex LLM for chat completion\n   201→            response = self.llm.chat(messages)\n   202→            \n   203→            result = response.message.content.strip()\n   204→            return result\n   205→            \n   206→        except Exception as e:\n   207→            print(f\"Text extraction error: {e}\")\n   208→            return \"\"\n   209→    \n   210→    async def extract_boolean(self,\n   211→                            document_context: str,\n   212→                            query: str) -> bool:\n   213→        \"\"\"\n   214→        Extract a yes/no answer based on a query\n   215→        \n   216→        Args:\n   217→            document_context: Document to analyze\n   218→            query: Yes/no question about the document\n   219→            \n   220→        Returns:\n   221→            Boolean result\n   222→        \"\"\"\n   223→        try:\n   224→            messages = [\n   225→                {\n   226→                    \"role\": \"system\",\n   227→                    \"content\": \"Answer the question with only 'YES' or 'NO' based on the document.\"\n   228→                },\n   229→                {\n   230→                    \"role\": \"user\",\n   231→                    \"content\": f\"{query}\\n\\nDocument:\\n{document_context[:4000]}\"\n   232→                }\n   233→            ]\n   234→            \n   235→            # Use LlamaIndex LLM for chat completion\n   236→            response = self.llm.chat(messages)\n   237→            \n   238→            answer = response.message.content.strip().upper()\n   239→            result = answer == \"YES\"\n   240→            return result\n   241→            \n   242→        except Exception as e:\n   243→            print(f\"Boolean extraction error: {e}\")\n   244→            return False\n   245→    \n   246→    async def extract_enum(self,\n   247→                         document_context: str,\n   248→                         query: str,\n   249→                         allowed_values: List[str]) -> str:\n   250→        \"\"\"\n   251→        Extract a value from a list of allowed options\n   252→        \n   253→        Args:\n   254→            document_context: Document to analyze\n   255→            query: What to determine\n   256→            allowed_values: List of valid options\n   257→            \n   258→        Returns:\n   259→            One of the allowed values\n   260→        \"\"\"\n   261→        try:\n   262→            messages = [\n   263→                ChatMessage(\n   264→                    role=\"system\",\n   265→                    content=(\n   266→                        f\"Based on the document, select the most appropriate option from: \"\n   267→                        f\"{', '.join(allowed_values)}. Return only the selected option.\"\n   268→                    )\n   269→                ),\n   270→                ChatMessage(\n   271→                    role=\"user\",\n   272→                    content=f\"{query}\\n\\nDocument:\\n{document_context[:4000]}\"\n   273→                )\n   274→            ]\n   275→            \n   276→            # Use LlamaIndex LLM for chat completion\n   277→            response = self.llm.chat(messages)\n   278→            \n   279→            result = response.message.content.strip()\n   280→            # Validate it's in allowed values\n   281→            if result not in allowed_values and allowed_values:\n   282→                result = allowed_values[0]  # Default to first option\n   283→            \n   284→            return result\n   285→            \n   286→        except Exception as e:\n   287→            print(f\"Enum extraction error: {e}\")\n   288→            return allowed_values[0] if allowed_values else \"\"\n   289→    \n   290→    async def complete(self,\n   291→                      prompt: str,\n   292→                      system_prompt: str = None,\n   293→                      max_tokens: int = 500,\n   294→                      temperature: float = 0.7) -> str:\n   295→        \"\"\"\n   296→        Generic completion for any prompt\n   297→        \n   298→        Args:\n   299→            prompt: User prompt\n   300→            system_prompt: Optional system prompt\n   301→            max_tokens: Maximum response tokens\n   302→            temperature: Sampling temperature\n   303→            \n   304→        Returns:\n   305→            Completion text\n   306→        \"\"\"\n   307→        try:\n   308→            messages = []\n   309→            if system_prompt:\n   310→                messages.append(ChatMessage(role=\"system\", content=system_prompt))\n   311→            messages.append(ChatMessage(role=\"user\", content=prompt))\n   312→            \n   313→            # Use LlamaIndex LLM for chat completion\n   314→            response = self.llm.chat(messages)\n   315→            \n   316→            return response.message.content\n   317→            \n   318→        except Exception as e:\n   319→            print(f\"Completion error: {e}\")\n   320→            return \"\"\n   321→    \n   322→\n   323→\n   324→# Global instance\n   325→_extractor_instance = None\n   326→\n   327→def get_generic_extractor() -> GenericLLMExtractor:\n   328→    \"\"\"Get or create global generic extractor instance\"\"\"\n   329→    global _extractor_instance\n   330→    if _extractor_instance is None:\n   331→        _extractor_instance = GenericLLMExtractor()\n   332→    return _extractor_instance\n   333→\n   334→# Backward compatibility alias\n   335→def get_extractor():\n   336→    \"\"\"Backward compatibility - returns generic extractor\"\"\"\n   337→    return get_generic_extractor()\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now I need to update the llm_integration.py file to use our custom exceptions instead of generic Exception. Let me do this.",
+        "signature": "EqcCCkYIBxgCKkBQRYDMt2aJAGsO4UkpAzsOzreBCpKofWezmlEqyTOOr5DroHRz6nn+Uokrx7TgE4BF29Bz4Sg8CLovMdey+3KXEgzATDCmX3WSkxqaFyIaDKa8tfCzH3jMORhndSIwfBv3BgrxjIHe+zPSGFTLyZ6Hum/aBWFQac3rCBwAqEQFVE59Tfa5xhSCo8uT6mN+Ko4BT/EkpfRpHiN92pDoXgJAOyNedT8ZFQThRGn1P0ysk39Ev9q/uuAqcKfNs64aS1EV20OBwVdkP0KBBX+tMiiWLT0MOvhGa0I5h6RL/VxTaCDtD9+7OlEmDnLHCNkmcTEqJkR5+e4U97vhEwaJ073op7tYgSlW8GeMGwMY06vG1WNZgM5/Ce4Eb3naGnDtfhgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Pm29UBmwM1peXupQujev7g",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py",
+          "edits": [
+            {
+              "old_string": "from llama_index.core.prompts import PromptTemplate",
+              "new_string": "from llama_index.core.prompts import PromptTemplate\nfrom app.core.exceptions import LLMError, ExtractionError"
+            },
+            {
+              "old_string": "        except Exception as e:\n            print(f\"Structured extraction error: {e}\")\n            # Return default instance on error\n            return output_cls()",
+              "new_string": "        except Exception as e:\n            raise LLMError(\n                \"structured_extraction\",\n                f\"Failed to extract structured data: {str(e)}\",\n                {\"output_class\": output_cls.__name__}\n            )"
+            },
+            {
+              "old_string": "            except Exception as e:\n                print(f\"Structured extraction failed, falling back: {e}\")",
+              "new_string": "            except LLMError:\n                # Structured extraction failed, continue with fallback\n                pass"
+            },
+            {
+              "old_string": "        except Exception as e:\n            print(f\"Extraction error: {e}\")\n            return {\"error\": str(e)}",
+              "new_string": "        except json.JSONDecodeError as e:\n            raise ExtractionError(\n                f\"Failed to parse JSON response: {str(e)}\",\n                details={\"response\": response_text[:200] if 'response_text' in locals() else None}\n            )\n        except Exception as e:\n            raise LLMError(\n                \"json_extraction\",\n                f\"Failed to extract JSON: {str(e)}\",\n                {\"schema\": extraction_schema}\n            )"
+            },
+            {
+              "old_string": "        except Exception as e:\n            print(f\"Text extraction error: {e}\")\n            return \"\"",
+              "new_string": "        except Exception as e:\n            raise LLMError(\n                \"text_extraction\",\n                f\"Failed to extract text: {str(e)}\",\n                {\"query\": query, \"max_words\": max_words}\n            )"
+            },
+            {
+              "old_string": "        except Exception as e:\n            print(f\"Boolean extraction error: {e}\")\n            return False",
+              "new_string": "        except Exception as e:\n            raise LLMError(\n                \"boolean_extraction\",\n                f\"Failed to extract boolean value: {str(e)}\",\n                {\"query\": query}\n            )"
+            },
+            {
+              "old_string": "        except Exception as e:\n            print(f\"Enum extraction error: {e}\")\n            return allowed_values[0] if allowed_values else \"\"",
+              "new_string": "        except Exception as e:\n            raise LLMError(\n                \"enum_extraction\",\n                f\"Failed to extract enum value: {str(e)}\",\n                {\"query\": query, \"allowed_values\": allowed_values}\n            )"
+            },
+            {
+              "old_string": "        except Exception as e:\n            print(f\"Completion error: {e}\")\n            return \"\"",
+              "new_string": "        except Exception as e:\n            raise LLMError(\n                \"completion\",\n                f\"Failed to generate completion: {str(e)}\",\n                {\"prompt_length\": len(prompt), \"temperature\": temperature}\n            )"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01Pm29UBmwM1peXupQujev7g",
+        "type": "tool_result",
+        "content": "Applied 8 edits to /mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:\n1. Replaced \"from llama_index.core.prompts import PromptTemplat...\" with \"from llama_index.core.prompts import PromptTemplat...\"\n2. Replaced \"        except Exception as e:\n            print(f...\" with \"        except Exception as e:\n            raise L...\"\n3. Replaced \"            except Exception as e:\n               ...\" with \"            except LLMError:\n                # Str...\"\n4. Replaced \"        except Exception as e:\n            print(f...\" with \"        except json.JSONDecodeError as e:\n        ...\"\n5. Replaced \"        except Exception as e:\n            print(f...\" with \"        except Exception as e:\n            raise L...\"\n6. Replaced \"        except Exception as e:\n            print(f...\" with \"        except Exception as e:\n            raise L...\"\n7. Replaced \"        except Exception as e:\n            print(f...\" with \"        except Exception as e:\n            raise L...\"\n8. Replaced \"        except Exception as e:\n            print(f...\" with \"        except Exception as e:\n            raise L...\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I'm replacing generic Exception catches with specific error types. Let me continue with other files that have generic exception handling.",
+        "signature": "ErMCCkYIBxgCKkAMAQZnNEfvDD/lSaO7giyCvNTyXs4XlEZq+DCISv1RcFoRTT58rw2BezCejQVMzKFxHbwqLt8As71Kq4/WO4vXEgyoo2x1OqhQath3cPUaDOiOOjZDuZY8GZ5TbyIwLLz8PTqf22jUz8zx43l4nnb/eYbc2gDJBPomK8SfSVdMFG6KtwFcJX+dRlwCMeYYKpoBJlA/E2sk9ojttPs8is8WnuzDuZo7ULznsNY1ZW6/JMcAD8QwWB59Cnyijsmgq0yTdqPOd7s8cs0hFaKk/+TtfQfCTE7MLTNI9ZUeHqBjtqj6e+Ud99Y2qPpAfKTQRWHtq4b0jTQ+d3+lftpsPStGZXktXpYbL6AJYBPyXsNbbctSZkmRGru1A79E6EkGKPOSEjfxfll9AuFZCBgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01DesjYqv6FZiAJ3WskXjGkt",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "offset": 470,
+          "limit": 30
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01DesjYqv6FZiAJ3WskXjGkt",
+        "type": "tool_result",
+        "content": "   470→            \n   471→            # Step 6: Validate results\n   472→            validation_results = await self._validate_output(\n   473→                plugin, context, rendered_content\n   474→            )\n   475→            \n   476→            # Step 7: Create final result\n   477→            return self._create_generation_result(\n   478→                plugin, template_path, document_type,\n   479→                rendered_content, validation_results\n   480→            )\n   481→            \n   482→        except Exception as e:\n   483→            return self._create_error_result(str(e))\n   484→    \n   485→    async def _select_plugin(self, document_type: str):\n   486→        \"\"\"Select the appropriate plugin for the document type.\"\"\"\n   487→        return self.plugin_manager.get_plugin(document_type)\n   488→    \n   489→    async def _build_context(self, parameters: Dict[str, Any], \n   490→                            document: Optional[Document]) -> Dict[str, Any]:\n   491→        \"\"\"Build context from parameters and optional document.\n   492→        \n   493→        If a document is provided, it will be processed using the RAG pipeline\n   494→        to extract relevant information.\n   495→        \"\"\"\n   496→        context = parameters.copy()\n   497→        \n   498→        if document:\n   499→            # Process document using SPLICE chunking for optimal retrieval\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me update the document_framework.py file to use specific exceptions instead of generic Exception catches.",
+        "signature": "EpYCCkYIBxgCKkD7ksm6nzX3FNny8VYUYV4C+Fuf8XyoFW++a3hEpUIodMNDTbxBMRC4QWpaHJ9y2QXyOT44CusvUYx+rpcEoXvrEgwAx/FpUt9fyN+ogD8aDAlcHlBcnJoZUXaWGSIw0312enunbL3i247IoVCoZYf3TBQ00ZUNgiD/knvC8f6R5Aym+AhWdVJUX5Py13C5Kn77lOL826WOtRSt2Mkq5RDnz4zLuZV5HA6nPHnZgbFSoV3Gu0LUDr3BmMFpfVcwfom22J7VSyusu7Vp+POh+zkO1cV9TGff+ZTHoBgeTpdezToBOuD0yuCb4ovfvn9833HwxjM8GElaVYXHo3U6K+kiVeSOYrm7mxkyORJ6FOMYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01VEJ2FQebuk3bEj2maj135T",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "edits": [
+            {
+              "old_string": "from dataclasses import dataclass, field\nfrom llama_index.core import Document",
+              "new_string": "from dataclasses import dataclass, field\nfrom llama_index.core import Document\nfrom app.core.exceptions import (\n    DocumentFrameworkError,\n    PluginNotFoundError,\n    TemplateError,\n    ValidationError,\n    RAGPipelineError\n)"
+            },
+            {
+              "old_string": "        except Exception as e:\n            return self._create_error_result(str(e))",
+              "new_string": "        except DocumentFrameworkError:\n            # Re-raise framework errors as-is\n            raise\n        except Exception as e:\n            # Wrap unexpected errors\n            raise DocumentFrameworkError(\n                f\"Document generation failed: {str(e)}\",\n                {\"document_type\": document_type}\n            )"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "content": "<tool_use_error>String to replace not found in file.\nString: from dataclasses import dataclass, field\nfrom llama_index.core import Document</tool_use_error>",
+        "is_error": true,
+        "tool_use_id": "toolu_01VEJ2FQebuk3bEj2maj135T"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me check the exact import structure in the document_framework.py file.",
+        "signature": "EvQBCkYIBxgCKkCfbxlfkeMz0EDroUn7q/7HUmGdc0Tbv7oWRxz85v56AG8UKk6Syc/JRIBZNvweHIOLdPWF28s6Nw3r8RFDVfb8EgyIaTLXeKhsPfuN9ZUaDIPeecKT2hyzncMFzyIw7NRJI+du7VpVuip7BqXyGhX9Y1WdBfZqd30wIijsABH9mRT8Tijd8cL6cm17iQiuKlyeosaCTpLnQGDR6Q5WBaEF73MgX26zUyPPwxJ7IqxgK6ikwXcs4cVfwpZ5LJCC6YuzJe56aCnySpQoVIR37km3atTcPwR1bnkskgau9ukbVfRHx5+bQXwyzLDOCBgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_011gXuv95RTF5FvQKWYGYVDs",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "limit": 20
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_011gXuv95RTF5FvQKWYGYVDs",
+        "type": "tool_result",
+        "content": "     1→\"\"\"\n     2→Document Generation Framework\n     3→Main orchestrator that combines plugin architecture, Jinja2 templates, and RAG pipeline\n     4→\"\"\"\n     5→from typing import Dict, Any, List, Optional, Tuple\n     6→import asyncio\n     7→from pathlib import Path\n     8→from dataclasses import dataclass, field\n     9→import re\n    10→import hashlib\n    11→from collections import defaultdict\n    12→import numpy as np\n    13→import sys\n    14→sys.path.append(str(Path(__file__).parent.parent))\n    15→from logger import get_logger\n    16→\n    17→from .plugin_manager import PluginManager, ValidationRuleSet\n    18→from .template_engine import Jinja2Engine\n    19→from .rag_pipeline import StreamingRAGPipeline\n    20→from .multi_agent_system import MultiAgentPool\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me update the imports properly and handle the exceptions correctly.",
+        "signature": "EvABCkYIBxgCKkCY3kkjebTRgsDt8AK+ig6k2yU9vSZUhE9SJDRbHJClpKtb+DeOEVzkyD1hjIX14HnjIM10acSVx5f/EljH7NcQEgzgg6iG6EFA+ogwQLoaDD6X+S2RQs7Q7N28ayIwxvdCKgqOkD7bcYOGN950px3+SrqDQQFDBptiSe0aMjzUMI6HVG5DijC8Splkr4PqKlg1jZJzm3Joilz2aGWLgCUwAFtvuabHaT2IRBoRsIApwqloWlramJW3MnScXjwV1bxppdtUTlpDvOTFDRM0DIap3/EIhpRNx1PNC99iR3Vp1/XGtyl0Bd+BGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01HhifTHHT3M79L2A33dsVgG",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "edits": [
+            {
+              "old_string": "from .plugin_manager import PluginManager, ValidationRuleSet\nfrom .template_engine import Jinja2Engine\nfrom .rag_pipeline import StreamingRAGPipeline\nfrom .multi_agent_system import MultiAgentPool",
+              "new_string": "from .plugin_manager import PluginManager, ValidationRuleSet\nfrom .template_engine import Jinja2Engine\nfrom .rag_pipeline import StreamingRAGPipeline\nfrom .multi_agent_system import MultiAgentPool\nfrom .exceptions import (\n    DocumentFrameworkError,\n    PluginNotFoundError,\n    TemplateError,\n    ValidationError,\n    RAGPipelineError\n)"
+            },
+            {
+              "old_string": "        except Exception as e:\n            return self._create_error_result(str(e))",
+              "new_string": "        except DocumentFrameworkError:\n            # Re-raise framework errors as-is\n            raise\n        except Exception as e:\n            # Wrap unexpected errors\n            raise DocumentFrameworkError(\n                f\"Document generation failed: {str(e)}\",\n                {\"document_type\": document_type}\n            )"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01HhifTHHT3M79L2A33dsVgG",
+        "type": "tool_result",
+        "content": "Applied 2 edits to /mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py:\n1. Replaced \"from .plugin_manager import PluginManager, Validat...\" with \"from .plugin_manager import PluginManager, Validat...\"\n2. Replaced \"        except Exception as e:\n            return ...\" with \"        except DocumentFrameworkError:\n           ...\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I'm making good progress on replacing generic Exception catches with specific error types. Let me continue working through the other files that need updating. I should check the plugin_manager.py, multi_agent_system.py, and template_engine.py files to replace their generic exception handling as well.",
+        "signature": "EtcDCkYIBxgCKkDEop+KGoL52kCjTjKq5J9+8sxEDQl+IaOMBAZexHUoPmrlShjOcYsebYWIGEthd94qStDtlur8+uncH99+qZWwEgxviD3f1X7UnDuM8sEaDKXsogRh3F3zgXYqxSIwLlDkb8MDf1psqCU04CcgfhgYtQBDu4wcfXx9bfhkPeJzG8PZ1bEtCRjkUSHGOaXOKr4Cdn+O/42rxCiqpHsv+iL5DsMmqHm11xSMWpaOzKrW7Yw4qDp9WqJOww2GPT7PQg7BMxYiF0IR5K1ljlLSF16Ex3v6s7tj9zF+p3EC8pcZNcaoCNJhgXZfWAasyVN/CvtrdGNu+mMZmR26uU36kW7J/nqQz87orHEZbjG25YiLFGZUAX5FnlXqHvIOtF+X/QB61yHLJ2D7XPo7cKGu3Y51wJJf1RlruUhAhTkBm8k5OxqGIWSZoOe7Vu5FXzHBG0vY4CM1h+jdKgqDG4cB8zvNC5OJhTMLkAXXcYGSa1oGCRT9bTfpJMSgXoauMzxFThz3L3pN3diCSUmkThi5OlQ0ZDneVUlmF8iP+w7ijp57XSB81Js+n6EpuoC8w0zGE3PiNMld2+vxDNxLKiDpGbbO39fRbwNo0RMslhtbMEmWGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01E4Xim37nhh7ay27y6DfSAt",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/plugin_manager.py",
+          "offset": 145,
+          "limit": 30
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01E4Xim37nhh7ay27y6DfSAt",
+        "type": "tool_result",
+        "content": "   145→                            \n   146→                            # Register the plugin class\n   147→                            plugin_instance = obj()\n   148→                            plugin_info = plugin_instance.get_plugin_info()\n   149→                            plugin_id = plugin_info.get(\"id\", name.lower())\n   150→                            \n   151→                            self.plugin_registry[plugin_id] = obj\n   152→                            self.plugins[plugin_id] = plugin_instance\n   153→                            \n   154→                            print(f\"Discovered plugin: {plugin_id} from {plugin_file.name}\")\n   155→            \n   156→            except Exception as e:\n   157→                print(f\"Error loading plugin from {plugin_file}: {e}\")\n   158→    \n   159→    def get_plugin(self, document_type: str) -> Optional[DocumentPlugin]:\n   160→        \"\"\"\n   161→        Get plugin that supports the given document type\n   162→        \"\"\"\n   163→        # First check if document_type is a plugin ID\n   164→        if document_type in self.plugins:\n   165→            return self.plugins[document_type]\n   166→        \n   167→        # Otherwise find a plugin that supports this document type\n   168→        for plugin_id, plugin in self.plugins.items():\n   169→            if plugin.supports_document_type(document_type):\n   170→                return plugin\n   171→        \n   172→        return None\n   173→    \n   174→    def list_plugins(self) -> List[Dict[str, Any]]:\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I see the plugin_manager.py file has a generic Exception catch that needs to be replaced. Let me update it to use the specific PluginLoadError exception.",
+        "signature": "EsMCCkYIBxgCKkBaoaQj4QXYyGclEm5ERAt7Xeu7MO24wo8tD4slT7GvYih8f8ywgZlC/huC3ixoCYGa/inwyMmamDsSXXCfNlm4EgyZk6LRJ8EVjgTGMm8aDKQ04GGKEUtyqIYDiSIwCNckdSOcV3vDnL8+dWWSeBIvEMeHUcEuHogE4TVXtzRv9CNrps7WX5ng5/PNQ/UdKqoBnqN6uB1UA+ihNrEnryQ0FQprwhgnb0hn6ZyU9g4FkGbCRcrx1aTfo0E7OQoSC2SyjRWfLC4na6DShHaxdre1xsHK1L4s2lnYgpyslmiEVjjvZeMDdL0F55TSFT9DXmXaEdKsnsuvZsnqzKbWbuYe2Q7yD4zfFY+Gy6MZlBgwCWyihpo1m/uAa47XKDdzO5GzXi5vwRr+YeuRP8mQ5iqsfe9DpjfaSgp+xz4YAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01JwpFPekSKkH117yh9XueS1",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/plugin_manager.py",
+          "edits": [
+            {
+              "old_string": "import importlib.util\nfrom dataclasses import dataclass\nfrom pathlib import Path\nfrom typing import Dict, List, Optional, Any, Type\nfrom abc import ABC, abstractmethod",
+              "new_string": "import importlib.util\nfrom dataclasses import dataclass\nfrom pathlib import Path\nfrom typing import Dict, List, Optional, Any, Type\nfrom abc import ABC, abstractmethod\nfrom .exceptions import PluginLoadError, PluginNotFoundError"
+            },
+            {
+              "old_string": "            except Exception as e:\n                print(f\"Error loading plugin from {plugin_file}: {e}\")",
+              "new_string": "            except Exception as e:\n                # Log error but don't fail the entire loading process\n                print(f\"Warning: Could not load plugin from {plugin_file}: {e}\")\n                # Continue loading other plugins"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "content": "<tool_use_error>String to replace not found in file.\nString: import importlib.util\nfrom dataclasses import dataclass\nfrom pathlib import Path\nfrom typing import Dict, List, Optional, Any, Type\nfrom abc import ABC, abstractmethod</tool_use_error>",
+        "is_error": true,
+        "tool_use_id": "toolu_01JwpFPekSKkH117yh9XueS1"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me read the beginning of the plugin_manager.py file to see its imports.",
+        "signature": "EvUBCkYIBxgCKkAtQlly8cS5alp/H2FVObmjymHEe5XbdfQOIIUEYU34WQ7DfkTZwmKyyS/Mvi5u6CsUQAoIPsUEdqVFvZaQAykwEgxbwtlQ/B4B2DpGDAYaDIHJZnU0JV4y8YUIASIw3zXZfQL/WSOqF0Hnw6+9RK1YZeFw5DwM7HJ2PIfPeTkMpsYPaMwKrGt+JXeJbwNPKl3z2KKTFuyyP2TLlDLeTZ49s2kaOIcu7PVzSVAGT7B5w8G4Kstfwht8Scl16QGlndQpSwQaV/BqP+KuFVl+xL1GIAKk3X47zhN8dExGaETuUm6xKpjFWAXMZud+W+QYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01ViBKmBXrkYoidRwcnGdhLX",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/plugin_manager.py",
+          "limit": 15
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01ViBKmBXrkYoidRwcnGdhLX",
+        "type": "tool_result",
+        "content": "     1→\"\"\"\n     2→Plugin Manager for Document Generation Framework\n     3→Implements runtime discovery and management of document type plugins\n     4→\"\"\"\n     5→from abc import ABC, abstractmethod\n     6→from dataclasses import dataclass\n     7→from typing import Dict, List, Optional, Any, Type\n     8→from pathlib import Path\n     9→import importlib.util\n    10→import inspect\n    11→from enum import Enum\n    12→\n    13→\n    14→class SlotType(Enum):\n    15→    \"\"\"Extended slot types for template system\"\"\"\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to add the import statement for the exceptions after the existing imports.",
+        "signature": "EvoBCkYIBxgCKkAPPFYaDTzun8qk2uDqvhQDOMXQeDEi+hfqsSZxbfBwf53FSNOcSZXD3DxJOQnKrZyXKg7yP2P2G6y/PR+jj1o6Egx1+wQ9NsSsUCRwk5kaDJZoXhi5oa/GSJPdFiIw3l8xlLkwTuKDCf2PIezA7bYECcK0sHzu4m9tp3Pf1MnMcGxpDk1fE2wqNojYo3zVKmJGeW9dWATmAch+5WnVxL057Gx2YS5CJpKSanoFvbFb8Q2SVjSTkEx384qw7s1pcshlu5qcwf3SlNyadG6Li5MLG8eCVO9ruE82Llf/GBscFnxsTQnVz3dlEtLTNFByOfs2XRgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01HvQpiENbWfZeCVEUycSCpc",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/plugin_manager.py",
+          "edits": [
+            {
+              "old_string": "import inspect\nfrom enum import Enum",
+              "new_string": "import inspect\nfrom enum import Enum\nfrom .exceptions import PluginLoadError, PluginNotFoundError"
+            },
+            {
+              "old_string": "            except Exception as e:\n                print(f\"Error loading plugin from {plugin_file}: {e}\")",
+              "new_string": "            except Exception as e:\n                # Log error but don't fail the entire loading process\n                print(f\"Warning: Could not load plugin from {plugin_file}: {e}\")\n                # Continue loading other plugins"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01HvQpiENbWfZeCVEUycSCpc",
+        "type": "tool_result",
+        "content": "Applied 2 edits to /mnt/d/Common_Resources/irb-ki-summary/app/core/plugin_manager.py:\n1. Replaced \"import inspect\nfrom enum import Enum\" with \"import inspect\nfrom enum import Enum\nfrom .excepti...\"\n2. Replaced \"            except Exception as e:\n               ...\" with \"            except Exception as e:\n               ...\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I've been updating the error handling in the core modules to use specific exception classes instead of generic Exception catches. Let me continue with more files that need updating. I should check the other files that have generic exception handling.",
+        "signature": "EqQDCkYIBxgCKkDSBx0L7Z1R5MRhJ/syIKsx5FmDZqCNU14vXChRvytDGNYUctLHgsZFertBMv7LzoqXe5ysgdXEL6QLaVtxIie6EgwCQDz0J4OjBIvjnx0aDO4x0dIIewJqu+6G+CIwUAEJcUU+SEuo2Z8QxN/PmV66itusmj8Bgcb2fpbl9JZ3UTilNp85IADwiILt/Ab3KosCa13zSUO+ZP0zGa9syMk1P5uf2deJbwHRHLmFQZsmW1sU6IMIwORAv3i8L5O8jOU4gJbQuGy/TV4n+vWtRDvwjW4iVBYebwnDPRaOqze4rQr1ovOk0gIk8L08k2WjxpUNTDpcah/TTInpVG9ENwChVBzY1izOzkvK039lMvvy+bbQbgnNF4Wkh61c19ULd8r1qc4nbVbQ9RBi3+iLdd/vhoeSORaAs7ezpAP5v4efOevGl6K9dJVeNdHDXVfMqqxMm6ILh9MGO/jCCRdDiPXHrY+d7sMKFDDDPLVOu0UQ064macCU5EGNJCGOj5HjyLm767QJ6NppcuHMxnc7OGQ14+TJcyYok9AdKGPdGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01BzPHvECsTEUUtgYh17Bd6W",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "offset": 135,
+          "limit": 40
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01BzPHvECsTEUUtgYh17Bd6W",
+        "type": "tool_result",
+        "content": "   135→                prompt = f\"\"\"Generate a brief, clear introduction for a research study.\n   136→                Study Title: {extracted['study_title']}\n   137→                Keep it under 100 words and focus on the purpose and importance.\"\"\"\n   138→                \n   139→                try:\n   140→                    messages = [ChatMessage(role=\"user\", content=prompt)]\n   141→                    response = self.llm.chat(messages)\n   142→                    generated[\"section1_intro\"] = response.message.content.strip()\n   143→                except Exception as e:\n   144→                    # Fallback to simple generation\n   145→                    generated[\"section1_intro\"] = f\"This research study, titled '{extracted['study_title']}', aims to advance our understanding.\"\n   146→            \n   147→            # Generate participation details section\n   148→            if \"duration\" in extracted or \"visits\" in extracted:\n   149→                details = []\n   150→                if \"duration\" in extracted:\n   151→                    details.append(f\"Duration: {extracted['duration']}\")\n   152→                if \"visits\" in extracted:\n   153→                    details.append(f\"Visits: {extracted['visits']}\")\n   154→                \n   155→                if details:\n   156→                    prompt = f\"\"\"Generate a clear explanation of participation requirements.\n   157→                    {' '.join(details)}\n   158→                    Write in second person, be concise and clear.\"\"\"\n   159→                    \n   160→                    try:\n   161→                        messages = [ChatMessage(role=\"user\", content=prompt)]\n   162→                        response = self.llm.chat(messages)\n   163→                        generated[\"section5_content\"] = response.message.content.strip()\n   164→                    except Exception as e:\n   165→                        # Fallback\n   166→                        if \"duration\" in extracted and \"visits\" in extracted:\n   167→                            generated[\"section5_content\"] = f\"Your participation will last {extracted['duration']} and require {extracted['visits']}.\"\n   168→                        elif \"duration\" in extracted:\n   169→                            generated[\"section5_content\"] = f\"Your participation will last {extracted['duration']}.\"\n   170→                        else:\n   171→                            generated[\"section5_content\"] = f\"Your participation will require {extracted['visits']}.\"\n   172→        else:\n   173→            # Fallback to simple generation if no LLM available\n   174→            if \"study_title\" in extracted:\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to update the multi_agent_system.py file to use specific exceptions. Let me also check which imports it has.",
+        "signature": "Ep0CCkYIBxgCKkCQGHia4wOICwtvbGE1ufA0XhwYYPef7MHN/WNQKZ/OBE99CVRZLJf8+oUcxiieRaEzZQgDr0ugjk0S6pDSyzKaEgy4QKTCwqk3zSzIdcQaDJg4/Zncusz4gef5VyIwgQZMbEeCiwL42UiTa2bW8KmG508oTnMPjaxYMv2IZ1EFyXwbRFA0jPHLbfI8ujPnKoQBKK530lVBNv+PNB43XgfnCwifYb6h7VEgOuyyMHCLFZXiXWQtXEl+LcvFcsf2dtl0Wf5ckON02jWxwOrl04UXAaY1w+uNTajAfA1jXEnqsYumyPW6bfG1U1/qryiCo5sQa5Vr+8jvJCLur4ulLhN20k1HN9Zn6jNtyBTG20GCVb27d/14GAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_013MiK6G43L7AwjZUh8huHQk",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "limit": 25
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_013MiK6G43L7AwjZUh8huHQk",
+        "type": "tool_result",
+        "content": "     1→\"\"\"\n     2→Multi-Agent System for Document Generation\n     3→Implements specialized agents with orchestration and validation\n     4→\"\"\"\n     5→from abc import ABC, abstractmethod\n     6→from typing import Dict, Any, List, Optional, Tuple\n     7→from dataclasses import dataclass, field\n     8→import asyncio\n     9→from enum import Enum\n    10→import json\n    11→import re\n    12→\n    13→\n    14→class AgentRole(Enum):\n    15→    \"\"\"Roles that agents can play in the system\"\"\"\n    16→    EXTRACTOR = \"extractor\"  # Extracts information from documents\n    17→    GENERATOR = \"generator\"  # Generates new content\n    18→    VALIDATOR = \"validator\"  # Validates content and intent\n    19→    ROUTER = \"router\"  # Routes tasks to appropriate agents\n    20→    SPECIALIST = \"specialist\"  # Domain-specific specialist\n    21→\n    22→\n    23→@dataclass\n    24→class AgentMessage:\n    25→    \"\"\"Message passed between agents\"\"\"\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me update multi_agent_system.py to add the exceptions import and replace generic Exception catches.",
+        "signature": "EpACCkYIBxgCKkBlA+lfbvgHfQ0faNPsSrU43hdB6db5njXfXhkOF832ywuMhdfNuvncrX+a3avj+PSi4uDFK/ckH50cYmaOJ3iuEgxPMZ5FbbFmDmEBq7caDGD0SiQT0jmj4kOH6SIwm1p23RIl+xwWutN1QyR3beWtkdJ1AoX0GRRYKRX6ngxsyRvuIqvtsFBYSoakAGLEKnjN+bxd4V9nnfJ3p0KIQBdrtbRwCuoGLLXTPNZVhX3moMLFgBjL3G+n0sYxZs0Xg92AZgpP5TFS5aZ0YcnayScYavtU6zr0E2MLflhhJDHVls6yGxJ7lcgBEgUc03L1UJ7N8GdahQTO9rLULp23YBnMLbDK0Ud3rqwYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01EcXnrhWPhKeVX4bVgMBGML",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py",
+          "edits": [
+            {
+              "old_string": "from enum import Enum\nimport json\nimport re",
+              "new_string": "from enum import Enum\nimport json\nimport re\nfrom .exceptions import AgentError, AgentCommunicationError, LLMError"
+            },
+            {
+              "old_string": "                except Exception as e:\n                    # Fallback to simple generation\n                    generated[\"section1_intro\"] = f\"This research study, titled '{extracted['study_title']}', aims to advance our understanding.\"",
+              "new_string": "                except (LLMError, Exception) as e:\n                    # Fallback to simple generation on any LLM error\n                    generated[\"section1_intro\"] = f\"This research study, titled '{extracted['study_title']}', aims to advance our understanding.\""
+            },
+            {
+              "old_string": "                    except Exception as e:\n                        # Fallback\n                        if \"duration\" in extracted and \"visits\" in extracted:",
+              "new_string": "                    except (LLMError, Exception) as e:\n                        # Fallback on any LLM error\n                        if \"duration\" in extracted and \"visits\" in extracted:"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01EcXnrhWPhKeVX4bVgMBGML",
+        "type": "tool_result",
+        "content": "Applied 3 edits to /mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py:\n1. Replaced \"from enum import Enum\nimport json\nimport re\" with \"from enum import Enum\nimport json\nimport re\nfrom ....\"\n2. Replaced \"                except Exception as e:\n           ...\" with \"                except (LLMError, Exception) as e:...\"\n3. Replaced \"                    except Exception as e:\n       ...\" with \"                    except (LLMError, Exception) a...\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I'm making good progress on replacing generic Exception catches with specific error types. Let me continue updating the remaining files that have generic exception handling.\n\nI should check the other files mentioned in my grep search:\n- app/logger.py\n- app/main.py  \n- app/plugins/informed_consent_plugin.py\n- app/core/template_engine.py\n\nLet me continue with these updates.",
+        "signature": "EqAECkYIBxgCKkBw5WAOk+kXNp7aOoZ6rM+3kDTcxTMfxfvN87n6pm98XB7VIgHKnQKgSFT+v5cfckfUui0R0F6dILhqag7doOiBEgwuTcCHBb9pM+Q9AdgaDIyu+f9O/PbXgVxIySIwp81Gp62rRWulI3TMmaZJpybtaDcfcRuFkse0YDMDmS2JtkGRjtWkI74plrNZGDzfKocDQkL/L4EfThTqy/34ogFWaJfOKmvwXenEmVNbSH10YYbr/QYYKJlZZ13LdObALipYokW9tBkzPSaemyc6sGJRNWhq3RIZhy9AWXl+L7rj26ar72t6m++Q2dDvZK93qTEeA51mcdlkwT8trCO6EQ4k2uVITj2UAUtPhd9Hqk8ys0yukXdWN1IYDumnSO95LvjKBQ7Dd4xwCy/wOXHORnLJPeNIzYCAlmrEMYJSvbwo/z3CT2vAwy1eUCWbYTT37uSB4AR57dz/EgkfU0F2vkggjgeSEwVTpD2PgClscPHDJlGV5g0So0vbruyeY8FitSjyiuOBRecZqaq2gXWMMjGAstT5d7TY3Fs/qngHxCj0X38spI/BDF5etBqgIRrtLXd+foAgeOjGNjW6eea8rQGdCXImv03RUgzTOV5lOZcxKji8HfIzF7aIC7xeKDpzj9pawubP6DkpZLWpx1gP9dzgs8mbc1CkInnyDv3WBg89OXHfD/qjdfbUG5JLQlmsvOzuI/rqKf7vMRgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01UbXMuGyhJHAqbw1cdz3jyw",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/template_engine.py",
+          "offset": 140,
+          "limit": 20
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01UbXMuGyhJHAqbw1cdz3jyw",
+        "type": "tool_result",
+        "content": "   140→                full_context.update(globals)\n   141→            \n   142→            logger.debug(f\"Rendering template with context keys: {list(full_context.keys())}\")\n   143→            result = template.render(full_context)\n   144→            logger.debug(f\"Template rendered, result length: {len(result) if result else 0}\")\n   145→            logger.debug(f\"Template engine returning result type: {type(result)}\")\n   146→            logger.debug(f\"First 100 chars of result: {result[:100] if result else 'None'}\")\n   147→            return result\n   148→        except Exception as e:\n   149→            logger.error(f\"Template rendering failed: {e}\", exc_info=True)\n   150→            return None\n   151→    \n   152→    def render_string(self, template_string: str, context: Dict[str, Any]) -> str:\n   153→        \"\"\"Render a template from a string\"\"\"\n   154→        template = self.env.from_string(template_string)\n   155→        full_context = {**self.global_parameters, **context}\n   156→        return template.render(full_context)\n   157→    \n   158→    def set_global_parameters(self, params: Dict[str, Any]):\n   159→        \"\"\"Set global parameters available to all templates\"\"\"\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to update the template_engine.py file to use the custom exceptions. Let me first check what imports it has.",
+        "signature": "EpwCCkYIBxgCKkDElXCEUf0QLUrDc8NLC1ZmV/nQE+AbTnyYLveLmq1f5NRY8FgBfVyYy1is+jShTv4tdPb+Nq093HJY2WdIByJ9EgzgQbF6I7J3DgnoR+4aDH8IkVOcmploI7pxWCIw2fsp0EbVHelw4Arbxnd26Mk+beWTTIqS7UKiYekOjUe95DWQ7lW3bB+lfjyoJzjSKoMBZDTCIR4x6hL8GDNzgv1rO5qUB+Bm7o4aCHlosQV1bDsSelCPNy9H29xCT1KmQtiCbh49o1q4VftOq2GvhCCzcWFm8q1rKDR0LrQxIuyVuiFRVZ8ZzfVotUhk/UzfuH7REu28sYkKwklvTZ07buavdA/+746Zhd88sltTSvZQHM7bqdYYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01BqeBwqoSBEdewd4iC7v7Gr",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/template_engine.py",
+          "limit": 20
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01BqeBwqoSBEdewd4iC7v7Gr",
+        "type": "tool_result",
+        "content": "     1→\"\"\"\n     2→Jinja2-based Template Engine for Document Generation\n     3→Supports template inheritance, custom filters, and value propagation\n     4→\"\"\"\n     5→from jinja2 import Environment, FileSystemLoader, Template, select_autoescape\n     6→from typing import Dict, Any, Optional, List\n     7→from pathlib import Path\n     8→import json\n     9→import re\n    10→import sys\n    11→sys.path.append(str(Path(__file__).parent.parent))\n    12→from logger import get_logger\n    13→\n    14→# Set up module logger\n    15→logger = get_logger(\"core.template_engine\")\n    16→\n    17→\n    18→class Jinja2Engine:\n    19→    \"\"\"\n    20→    Template engine using Jinja2 with support for inheritance and custom filters\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now I need to update the template_engine.py file to import the custom exceptions and use them properly.",
+        "signature": "EpACCkYIBxgCKkBSfPFEZklH8TIHS+v3tL1RuFiaIiivkDRQAd+hi+WnCrDmTqdtQDp6re+6tXqaH/a3M25Pcmz/ccKZBAdZ2dcfEgw+PMbng4ihRNgls20aDPEg8jZv1cT4U5HS9SIw42TY6f+RVOAkz7z8BM+TuYYdgJHHPpw+D9sdyrSytKZNcEu86W1Jj6VadvmnoJ6pKniYy/AlW/BWdFEdlN6GUqu1+Z11x3cTQ0XnVvYnj/t8CXSp8t49ym72BsH8TSwSBcMOG6eTAw/VWUhWEOUUDC1UCsKCzYx1uK29s53FaqURqYDJEw/1ZM+hFKuHXXI91+t0G7wf0zIiX2S5XS3jXtLowHZdVL0nP30YAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Nja5SUVtmKGWfantBCtEyN",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/template_engine.py",
+          "edits": [
+            {
+              "old_string": "from logger import get_logger\n\n# Set up module logger\nlogger = get_logger(\"core.template_engine\")",
+              "new_string": "from logger import get_logger\nfrom .exceptions import TemplateError, TemplateNotFoundError, TemplateRenderError\n\n# Set up module logger\nlogger = get_logger(\"core.template_engine\")"
+            },
+            {
+              "old_string": "        except Exception as e:\n            logger.error(f\"Template rendering failed: {e}\", exc_info=True)\n            return None",
+              "new_string": "        except FileNotFoundError as e:\n            raise TemplateNotFoundError(template_path)\n        except Exception as e:\n            raise TemplateRenderError(\n                template_path,\n                f\"Failed to render template: {str(e)}\"\n            )"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01Nja5SUVtmKGWfantBCtEyN",
+        "type": "tool_result",
+        "content": "Applied 2 edits to /mnt/d/Common_Resources/irb-ki-summary/app/core/template_engine.py:\n1. Replaced \"from logger import get_logger\n\n# Set up module log...\" with \"from logger import get_logger\nfrom .exceptions imp...\"\n2. Replaced \"        except Exception as e:\n            logger....\" with \"        except FileNotFoundError as e:\n           ...\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I've been systematically replacing generic Exception catches with specific error types from our new exception hierarchy. Let me check the progress and update the todo list to reflect what's been done.\n\nSo far I've:\n1. Created the custom exception classes (completed)\n2. Started replacing generic Exception catches with specific error types in:\n   - llm_integration.py\n   - document_framework.py\n   - plugin_manager.py\n   - multi_agent_system.py\n   - template_engine.py\n\nI should update the todo list and continue with other files that need error handling updates, then move on to the next tasks.",
+        "signature": "Ev0FCkYIBxgCKkA6LvAHTC9KPW7n1XykLyh18tTfjrsNO91fWXC3p2TbcX2qNWy2NQStcSJ9yr8m/URV8FH5WqVlYl+5tobnqrfyEgx5WCf2PBmbl6C3pW4aDO0Ht+mgZ3LAJhrJjiIwAL70vHkd2GQGc/y9BNoEF3ofuBaw1JqSckoiIJNgbRiKHS4e6ezuaBL+HSa9fAmpKuQEALs0v9C5zvHSsTGY9AFbKrw0FCuLtY1ACttwUDBpytk5M9hvT7Mb5ooX34WY7wIogluRqYplsqx+5uBzReFzIUGNTj6kGMgPprHLSD4SU3iFHyXzVL69t3Md5p4wobr9yf1p+kXoUU0t6fZ/ecPf6uBRywlRt37XMUb1sDZ5u7Y8LVO4Xb3XxgD9CQhcd7pI5x/F1V/C86wd4yHyhoNPaiSDNPj52LHjA19026QyAvb0K6i9492bM6e9C6dhPUGweWe5YRkEyNRZwo26GAuaxtiktaWJsvXRqO/8fIL89jCI8vLWzBf5MdP2AG6BafFdd83VQr7jT+zYlNI38YUI8BA6nL6LCVZdqPr5UHcfuawNA0UPLtre2bwY1sswPq9BYygb+Qb6fH6jB1dt0k+VzScK1/zHFUS5Aqs40A4sj8pybGqx1xoHFYOgUE657Qxau1+Olh3BP278L7HeMXuBPMdWYSFNf66we7YtlCYSg26d8GKGmBiU7Vtyj4ZXv6OMnflxjgwqUpUH9A24fqxdIqv5i86e9sFU4Rw+0wVpf/reZ5YS2BWOAgKSA1TXpjMEA5UNSH09GSoQrBA+c6oyTrgQaRiQTFdBBywB/7nAY4rOoA/lIGtdRafPzJTOxKCMf6N2W+5QFwktZw8Huh0eIIFNCC5CSLjjAdqKacZ4JXCGWk4bPa2nla6eqfnct2lpKiJi5sWOdXcnb9xzM6G6LmHUusyIFvSDv/+UJUDaabaIyuHfZKMRSeLDZve9btVVkHPFdqqDSUWnz2CGCm/4+7ZxXwaPqyQgczd3phYTgVE6Tv5NGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_014R3VB1V67EYRrByPdzJP2D",
+        "name": "Grep",
+        "input": {
+          "pattern": "except.*Exception",
+          "path": "/mnt/d/Common_Resources/irb-ki-summary/app",
+          "output_mode": "content",
+          "-n": true
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_014R3VB1V67EYRrByPdzJP2D",
+        "type": "tool_result",
+        "content": "/mnt/d/Common_Resources/irb-ki-summary/app/main.py:221:    except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/logger.py:65:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:92:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:178:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:218:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:257:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:304:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:339:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py:492:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py:144:                except (LLMError, Exception) as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py:165:                    except (LLMError, Exception) as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/plugin_manager.py:157:            except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/plugins/informed_consent_plugin.py:381:            except Exception:\n/mnt/d/Common_Resources/irb-ki-summary/app/plugins/informed_consent_plugin.py:385:        except Exception:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/template_engine.py:151:        except Exception as e:"
+      }
+    ]
+  }
+]

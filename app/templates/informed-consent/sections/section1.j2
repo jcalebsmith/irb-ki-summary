@@ -1,0 +1,8 @@
+{# Section 1: Who can take part in this study? #}
+Section 1
+
+{% if is_pediatric == "YES" or pediatric_eligible == True %}
+You, or your child, may be eligible to take part in a research study. Parents or legal guardians who are giving permission for a child's participation in the research, note that in the sections that follow the word 'you' refers to 'your child'. This form contains information that will help you decide whether to join the study. All of the information in this form is important. Take time to carefully review this information. After you finish, you should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your friends, family, or other doctors about your possible participation in this study. If you decide to take part in the study, you will be asked to sign this form. Before you do, be sure you understand what the study is about.
+{% else %}
+You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.
+{% endif %}

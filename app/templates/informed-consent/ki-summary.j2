@@ -1,0 +1,43 @@
+{# Main Key Information Summary Template #}
+{% extends "base/master.j2" %}
+
+{% block document_header %}
+{# Key Information Summary Header #}
+Key Information Summary
+{% endblock %}
+
+{% block document_body %}
+{# Import section templates #}
+
+{# Section 1: Opening and Key Information #}
+{% include "informed-consent/sections/section1.j2" %}
+
+{# Section 2: Research vs Medical Care (Static) #}
+{% include "informed-consent/sections/section2.j2" %}
+
+{# Section 3: Important Considerations (Static) #}
+{% include "informed-consent/sections/section3.j2" %}
+
+{# Section 4: Study Description #}
+{% include "informed-consent/sections/section4.j2" %}
+
+{# Section 5: Duration and Time Commitment #}
+{% include "informed-consent/sections/section5.j2" %}
+
+{# Section 6: Procedures #}
+{% include "informed-consent/sections/section6.j2" %}
+
+{# Section 7: Risks #}
+{% include "informed-consent/sections/section7.j2" %}
+
+{# Section 8: Benefits #}
+{% include "informed-consent/sections/section8.j2" %}
+
+{# Section 9: Alternatives and Voluntary Participation #}
+{% include "informed-consent/sections/section9.j2" %}
+
+{% endblock %}
+
+{% block document_footer %}
+{# Optional footer content #}
+{% endblock %}
