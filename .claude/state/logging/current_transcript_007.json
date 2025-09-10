@@ -1,0 +1,479 @@
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_012e5hrkJ6EkNsLLfSPk4eDt",
+        "type": "tool_result",
+        "content": "     1→---\n     2→task: m-refactor-app-codebase\n     3→branch: feature/refactor-app-codebase\n     4→status: pending\n     5→created: 2025-09-10\n     6→modules: [app, app.core, app.plugins, app.templates]\n     7→---\n     8→\n     9→# Refactor App Codebase for Better Maintainability\n    10→\n    11→## Problem/Goal\n    12→The app/ codebase needs refactoring to improve code organization, readability, and maintainability. This refactoring should:\n    13→- Apply modern Python conventions and best practices\n    14→- Improve code structure and organization\n    15→- Enhance type hints and documentation\n    16→- Simplify complex functions and classes\n    17→- Maintain 100% backward compatibility (no behavior changes)\n    18→\n    19→## Success Criteria\n    20→- [ ] All existing functionality preserved (all tests pass)\n    21→- [ ] Code follows modern Python best practices (PEP 8, type hints, etc.)\n    22→- [ ] Improved code organization with clear separation of concerns\n    23→- [ ] Complex functions broken down into smaller, testable units\n    24→- [ ] Better error handling and logging consistency\n    25→- [ ] Documentation strings added where missing\n    26→- [ ] Reduced code duplication\n    27→- [ ] Improved naming conventions throughout\n    28→\n    29→## Context Manifest\n    30→\n    31→### How The App Codebase Currently Works: Document Generation Framework\n    32→\n    33→The app directory contains a sophisticated document generation framework built on a plugin-based architecture with multi-agent orchestration, Azure OpenAI integration, and Jinja2 templating. The system transforms regulatory documents (like informed consent forms) into structured summaries using advanced RAG (Retrieval-Augmented Generation) techniques.\n    34→\n    35→**Core Architecture Flow:**\n    36→When a user uploads a PDF document through the FastAPI endpoints (`/uploadfile/` or `/generate/`), the request first hits `app/main.py` which serves as the entry point. The main application creates a `DocumentGenerationFramework` instance that orchestrates the entire processing pipeline. The PDF is first processed by `app/pdf.py` using PyPDF to extract text and page labels into a `PDFPages` dataclass. This raw text is then converted into a LlamaIndex `Document` object with metadata preservation.\n    37→\n    38→The framework then selects an appropriate plugin from `app/plugins/` directory using the `PluginManager` in `app/core/plugin_manager.py`. The plugin manager dynamically discovers and loads document plugins at runtime by scanning Python files that extend the `DocumentPlugin` abstract base class. Each plugin defines specialized extraction logic, validation rules, and template catalogs for specific document types.\n    39→\n    40→**Multi-Agent Processing Pipeline:**\n    41→Once a plugin is selected, the framework initializes a `MultiAgentPool` from `app/core/multi_agent_system.py` with various specialized agents:\n    42→- **ExtractionAgent**: Uses regex patterns and Azure OpenAI to extract key information from documents\n    43→- **GenerationAgent**: Leverages LLM integration to generate natural language content for template slots\n    44→- **ValidationAgent**: Ensures extracted values meet validation rules and preserve intent\n    45→- **SpecialistAgent**: Handles domain-specific processing like template selection and sub-template routing\n    46→\n    47→The agents operate in a coordinated pipeline, sharing context through an `AgentContext` object that accumulates extracted values, generated content, and validation results. Messages are passed between agents for coordination and error handling.\n    48→\n    49→**Template Processing and Rendering:**\n    50→The extracted and generated content is then passed to the `Jinja2Engine` in `app/core/template_engine.py`. This engine supports template inheritance, custom filters, and dynamic template resolution. Templates are organized hierarchically under `app/templates/` with a base master template and document-type-specific templates. For informed consent documents, the system uses a 9-section Key Information Summary template structure where each section can contain conditional logic based on extracted values (e.g., pediatric vs. adult language, randomization notices).\n    51→\n    52→The template engine merges extracted values, generated content, and global parameters into a unified context. Custom filters handle text processing like capitalization, word limiting, and duplicate removal. Template slots support different types (static, extracted, generated, conditional, propagated) with cross-reference capabilities for value consistency.\n    53→\n    54→**Enhanced Validation and Consistency:**\n    55→After template rendering, the `EnhancedValidationOrchestrator` in `app/core/document_framework.py` performs comprehensive validation including:\n    56→- Required field validation against plugin-defined rules\n    57→- Length constraints and allowed value checking\n    58→- Critical value preservation to ensure important information isn't lost during generation\n    59→- Consistency metrics calculation including coefficient of variation tracking (target < 15%)\n    60→- Prohibited phrase detection to catch AI-generated artifacts\n    61→- Structural consistency checking for proper section formatting\n    62→\n    63→**Azure OpenAI Integration:**\n    64→The system integrates with Azure OpenAI through `app/core/llm_integration.py` using LlamaIndex's Azure OpenAI wrapper. The `GenericLLMExtractor` class provides structured extraction capabilities using Pydantic models defined in `app/core/extraction_models.py`. This enables type-safe extraction with automatic schema validation. The integration supports various extraction types (boolean, enum, text, numeric) with configurable parameters like temperature (set to 0 for consistency) and top_p values.\n    65→\n    66→**RAG Pipeline with SPLICE Chunking:**\n    67→For document processing, the system implements a sophisticated RAG pipeline in `app/core/rag_pipeline.py` using the SPLICE (Semantic Preservation with Length-Informed Chunking Enhancement) method. This chunker intelligently splits documents while preserving semantic boundaries and maintaining context through hierarchical metadata. The pipeline builds vector indices using LlamaIndex and supports streaming query capabilities for real-time updates.\n    68→\n    69→**Configuration and State Management:**\n    70→All application settings are centralized in `app/config.py` which replaces hardcoded values throughout the codebase. This includes memory configuration, text processing limits, Azure OpenAI settings, CORS security policies, and logging configuration. The logger system in `app/logger.py` provides consistent logging across all modules with rotating file handlers and configurable levels.\n    71→\n    72→**Plugin System Architecture:**\n    73→The two main plugins demonstrate the framework's flexibility:\n    74→- **InformedConsentPlugin** (`app/plugins/informed_consent_plugin.py`): Handles IRB Key Information Summary generation with 9-section structured output, pediatric language adaptation, and specialized extraction patterns\n    75→- **ClinicalProtocolPlugin** (`app/plugins/clinical_protocol_plugin.py`): Implements a 7-step workflow for clinical protocol generation including template selection, value propagation, sub-template selection, and intent validation\n    76→\n    77→### Current Code Quality Issues Identified\n    78→\n    79→**Type Annotations and Documentation:**\n    80→Many functions lack comprehensive type hints, particularly in the core framework classes. For example, `app/core/multi_agent_system.py` has several methods returning `Dict[str, Any]` instead of more specific types. Complex data structures like `AgentContext` and `ChunkMetadata` could benefit from more detailed type annotations. Docstrings are inconsistent across modules, with some functions having detailed documentation while others have minimal or missing descriptions.\n    81→\n    82→**Error Handling Inconsistencies:**\n    83→Error handling patterns vary throughout the codebase. Some modules use try-catch blocks with generic `Exception` handling (like in `app/core/llm_integration.py` lines 91-94), while others have more specific error types. The framework lacks a unified error handling strategy with proper error propagation and user-friendly error messages. Many functions silently return default values on errors rather than properly logging or bubbling up exceptions.\n    84→\n    85→**Code Duplication and Repetition:**\n    86→Several areas show code duplication:\n    87→- Template path resolution logic appears in multiple plugins with slight variations\n    88→- Validation logic is repeated across different validation methods in `EnhancedValidationOrchestrator`\n    89→- Agent creation patterns are duplicated in both plugin classes\n    90→- File path handling and document conversion logic appears in multiple locations (`main.py`, `summary.py`, test files)\n    91→\n    92→**Complex Functions Needing Refactoring:**\n    93→The `EnhancedValidationOrchestrator.validate()` method in `app/core/document_framework.py` (lines 88-131) is overly complex with multiple responsibilities. It should be broken down into smaller, focused methods. Similarly, the `DocumentGenerationFramework.generate()` method (lines 420-483) handles too many concerns in a single function. The `InformedConsentPlugin.process()` method in the KIExtractionAgent contains extensive conditional logic that could be simplified.\n    94→\n    95→**Inconsistent Naming Conventions:**\n    96→Variable naming is inconsistent across modules. Some use snake_case consistently while others mix camelCase. Class names generally follow PascalCase but some attributes use inconsistent patterns. Magic strings and numbers appear throughout the code without being defined as constants.\n    97→\n    98→**Missing Abstractions and Interfaces:**\n    99→While the plugin system uses abstract base classes, some areas lack proper abstractions. The agent system could benefit from more specific interfaces for different agent types. Template handling lacks consistent interfaces between different template types. The validation system mixes different validation types without clear separation of concerns.\n   100→\n   101→### Areas Requiring Refactoring Priority\n   102→\n   103→**High Priority - Core Framework Stability:**\n   104→1. **Agent System Redesign**: The multi-agent system needs cleaner interfaces and better separation of concerns between different agent roles\n   105→2. **Error Handling Standardization**: Implement consistent error handling with proper exception types and error propagation\n   106→3. **Validation Framework**: Break down the monolithic validation orchestrator into focused, testable components\n   107→4. **Type Safety**: Add comprehensive type hints throughout the core framework modules\n   108→\n   109→**Medium Priority - Code Organization:**\n   110→1. **Plugin Interface Standardization**: Ensure all plugins follow consistent patterns for template resolution, validation rules, and agent management\n   111→2. **Template System Refactoring**: Simplify template path resolution and improve template context management\n   112→3. **Configuration Management**: Consolidate remaining hardcoded values and improve configuration validation\n   113→4. **Logging Standardization**: Ensure consistent logging patterns across all modules\n   114→\n   115→**Lower Priority - Code Quality:**\n   116→1. **Function Decomposition**: Break down overly complex functions into smaller, testable units\n   117→2. **Documentation Enhancement**: Add comprehensive docstrings and type documentation\n   118→3. **Code Deduplication**: Eliminate repeated code patterns and create reusable utilities\n   119→4. **Naming Convention Cleanup**: Standardize variable and method naming throughout the codebase\n   120→\n   121→### Technical Reference Details\n   122→\n   123→#### Core Framework Classes and Their Responsibilities\n   124→\n   125→```python\n   126→# Main orchestration\n   127→DocumentGenerationFramework(plugin_dir, template_dir, embed_model, llm)\n   128→  - generate(document_type, parameters, document) -> GenerationResult\n   129→  - list_supported_document_types() -> List[str]\n   130→  - get_plugin_info(document_type) -> Dict[str, Any]\n   131→\n   132→# Plugin management\n   133→PluginManager(plugin_dir)\n   134→  - get_plugin(document_type) -> Optional[DocumentPlugin]\n   135→  - list_plugins() -> List[Dict[str, Any]]\n   136→  - reload_plugins()\n   137→\n   138→# Multi-agent orchestration  \n   139→MultiAgentPool(llm)\n   140→  - orchestrate(agents, parameters) -> Dict[str, Any]\n   141→  - register_agent(agent)\n   142→\n   143→# Template processing\n   144→Jinja2Engine(template_dir)\n   145→  - render(template_path, context, globals) -> str\n   146→  - set_global_parameters(params)\n   147→\n   148→# Validation\n   149→EnhancedValidationOrchestrator()\n   150→  - validate(original, rendered, rules, critical_values) -> Dict[str, Any]\n   151→  - get_consistency_report() -> Dict[str, Any]\n   152→```\n   153→\n   154→#### Key Data Structures\n   155→\n   156→```python\n   157→@dataclass\n   158→class GenerationResult:\n   159→    success: bool\n   160→    content: str\n   161→    metadata: Dict[str, Any]\n   162→    validation_results: Dict[str, Any]\n   163→    error_message: Optional[str] = None\n   164→\n   165→@dataclass\n   166→class AgentContext:\n   167→    document_type: str\n   168→    parameters: Dict[str, Any]\n   169→    extracted_values: Dict[str, Any]\n   170→    generated_content: Dict[str, str]\n   171→    validation_results: Dict[str, Any]\n   172→    critical_values: List[str]\n   173→    messages: List[AgentMessage]\n   174→\n   175→@dataclass  \n   176→class ValidationRuleSet:\n   177→    required_fields: List[str]\n   178→    max_lengths: Dict[str, int]\n   179→    allowed_values: Dict[str, List[str]]\n   180→    custom_validators: List[str]\n   181→    intent_critical_fields: List[str]\n   182→```\n   183→\n   184→#### Configuration Categories\n   185→\n   186→```python\n   187→# Core configuration in app/config.py\n   188→MEMORY_CONFIG = {\"max_entities\": 5000, \"decay_lambda\": 0.1, ...}\n   189→TEXT_PROCESSING = {\"max_tokens_per_batch\": 18000, \"chunk_size\": 2000, ...}\n   190→AZURE_OPENAI_CONFIG = {\"temperature\": 0, \"llm_model\": \"gpt-4o\", ...}\n   191→CORS_CONFIG = {\"allow_origins\": [...], \"allow_credentials\": True, ...}\n   192→VALIDATION_CONFIG = {\"prohibited_phrases\": [...], \"critical_value_patterns\": [...]}\n   193→```\n   194→\n   195→#### File Locations for Implementation\n   196→\n   197→- **Core framework refactoring**: `/mnt/d/Common_Resources/irb-ki-summary/app/core/`\n   198→- **Plugin improvements**: `/mnt/d/Common_Resources/irb-ki-summary/app/plugins/`\n   199→- **Template enhancements**: `/mnt/d/Common_Resources/irb-ki-summary/app/templates/`\n   200→- **Configuration updates**: `/mnt/d/Common_Resources/irb-ki-summary/app/config.py`\n   201→- **Main application improvements**: `/mnt/d/Common_Resources/irb-ki-summary/app/main.py`\n   202→- **Utility modules**: `/mnt/d/Common_Resources/irb-ki-summary/app/pdf.py`, `/mnt/d/Common_Resources/irb-ki-summary/app/summary.py`\n   203→- **Test updates**: `/mnt/d/Common_Resources/irb-ki-summary/test_*.py`\n   204→\n   205→#### Dependencies and Integration Points\n   206→\n   207→The codebase integrates with several external systems:\n   208→- **Azure OpenAI**: Via llama-index-llms-azure-openai for LLM operations\n   209→- **FastAPI**: Web framework with CORS middleware for API endpoints\n   210→- **PyPDF**: PDF text extraction with page labeling support\n   211→- **Jinja2**: Template engine with custom filters and inheritance\n   212→- **Pydantic**: Data validation and structured extraction schemas\n   213→- **LlamaIndex**: Document processing, vector indices, and retrieval systems\n   214→\n   215→All modules follow the centralized configuration pattern and use the standardized logging framework for consistent operation.\n   216→\n   217→## User Notes\n   218→- Preserve all existing behaviors - this is a pure refactoring\n   219→- Focus on making the code easier to understand, maintain, and extend\n   220→- Use modern Python conventions and best practices\n   221→- Ensure no breaking changes to existing API endpoints or functionality\n   222→\n   223→## Work Log\n   224→- [2025-09-10] Task created, preparing to gather context and research best practices\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Good, I have the full context of what needs to be done. Based on the context manifest, I should:\n\n1. Start with high priority items - core framework stability\n2. Focus on the agent system, error handling, validation framework, and type safety\n3. Preserve all existing behaviors (pure refactoring)\n\nLet me create a detailed todo list and start with the highest priority items. I'll begin with:\n1. Standardizing error handling across the codebase\n2. Adding comprehensive type hints\n3. Refactoring the complex validation orchestrator\n4. Improving the agent system interfaces\n\nLet me create a todo list and start working systematically.",
+        "signature": "EqIGCkYIBxgCKkD7RtHuc+v8pDEtIglC+c3RcX+su5OhNqL68iJcrBjf5JTQA/iSQi6KGwFfQWrGtgLhIxFOsgvoEArGeAxYLXiIEgyp9Lw3WhsKmZXj8xAaDFFaRo+H2Ou20B/y1yIwJybfMSu6SSgm33Z5D47melN4HyLY7oZ5jeQpWYc89NSe72VLq9l3qpE12tvO5pD3KokFWceltgMqzm/eumG6h15vlhqUQXfg0RQEugE3NgMX28ihYbP6dQzQqF5YFTNsRKQRvxNyViNNJ66J9KeUKK3XQFcQWYnvOUc3yjVeQOPsN/tZoJ2LbjAWymm7lZ7gG4nNyDLE21jOeJP2Aywt1h6d1M5orhzLRai85IF9xW6jBkgVMZY7hZ4qaFgEXZEfMB6uoRI/qEIF48hZ22dFx323HkqOPGOkihsDxh0Uj/5pD6kXuUWGzizY+YXO4C3MNKC44YQjV6YDycEVFRajufN2rlzrFY0o1V0iM5sB0qbmwHs4izdonmoWNsxt5e5TpCk/nI/kQv7+/HVvJyoOoX8TW2/LdXc5lNJGnrkmuoCQPU1lY/bIp5jm0Ljx3+1wz00fDAH/+epXuOjbJJYVk5XnrRpwQYgW0ZXnTWmQZFv7vKAwPpTBpvBlxbhpCF2CpXvkrKV0qquZbo5HJThIGinQYx7FTIP+PRRSnBjXXBTKFLI3xn7WSHfxKb6cE8THHwfyWdOTHAJ2i/NdDkLrPlWLnnn52zBVumWtCHjMoYHuKZSeFVXossgsp50N6jRPb3bbUx1slAbXv84uRXIgjaY70b8twujNFD8I0NkEB9BlEZ/hXQlqsEcAhELBrXmZfUJAqpKyq5CZyI3zjaIuOjsFCQ2zqtcmQbhXEmYGGKsHXFtCHon9Zar5jLpLkdxojWqUx3JqDZq+ltBA0wuLB/QEJu9SFl9uM0iKo+DRPNlEHKrUrhUR8lpctpUu6U6UEvhfIqiiItR+ZqmF8vO9mHHLMozXyj8qY+br9NEtMGMQLO3UahU127X7WkySfMeL3jg/80K+NMO2rQM7k+FHs66N/8YP6WcwxuNx+RgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_016aoJa9oEv9hGScz7ruLsZk",
+        "name": "TodoWrite",
+        "input": {
+          "todos": [
+            {
+              "content": "Create custom exception classes for consistent error handling",
+              "status": "pending",
+              "activeForm": "Creating custom exception classes for consistent error handling"
+            },
+            {
+              "content": "Add comprehensive type hints to core framework modules",
+              "status": "pending",
+              "activeForm": "Adding comprehensive type hints to core framework modules"
+            },
+            {
+              "content": "Refactor EnhancedValidationOrchestrator into smaller components",
+              "status": "pending",
+              "activeForm": "Refactoring EnhancedValidationOrchestrator into smaller components"
+            },
+            {
+              "content": "Standardize agent interfaces and improve separation of concerns",
+              "status": "pending",
+              "activeForm": "Standardizing agent interfaces and improving separation of concerns"
+            },
+            {
+              "content": "Replace generic Exception catches with specific error types",
+              "status": "pending",
+              "activeForm": "Replacing generic Exception catches with specific error types"
+            },
+            {
+              "content": "Create reusable utilities to eliminate code duplication",
+              "status": "pending",
+              "activeForm": "Creating reusable utilities to eliminate code duplication"
+            },
+            {
+              "content": "Standardize naming conventions across all modules",
+              "status": "pending",
+              "activeForm": "Standardizing naming conventions across all modules"
+            },
+            {
+              "content": "Add comprehensive docstrings to all public methods",
+              "status": "pending",
+              "activeForm": "Adding comprehensive docstrings to all public methods"
+            },
+            {
+              "content": "Run tests to ensure no functionality is broken",
+              "status": "pending",
+              "activeForm": "Running tests to ensure no functionality is broken"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_016aoJa9oEv9hGScz7ruLsZk",
+        "type": "tool_result",
+        "content": "Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I have my todo list set up. Now I should explain my refactoring plan to the user before starting implementation. I'll organize the refactoring into phases focused on the highest priority areas first.",
+        "signature": "EvECCkYIBxgCKkBGJiXM2I+F/2qytLXZt2ERN04J75S83BZVgZV79GjD3StODdmETmbJPNp6JxUnWTHC5xCw+87aV6gZKUy5sxTYEgwfBXhkilEK/aGJbC4aDNfr4n3quIPrdDvv8SIwsTV7HSMk1oXN9Ilr9YxrJr+EYo6v9tujL5ueTyKTNrOGFL49A29mMLRX9vbw7ksiKtgBGECjyYxHEWjc/6yH7JbF52z+ZwndsDo2yGJFn+PvqcEBszzWGXkrdzjV8KasVI+1FBcAO3OWhuQ62pJ65gStMekSYl0HAnLIq8qlZbjHr6R9mXFddrc6Ni9hnoO69MmpdmSyYUVSzcOUtRK4hVx8MsrSVGxGEY7AnpMZcRwIPZGCeDwO7tUcB+2X2CUiGOVTe5NY21mAoitOay7W2tFh0UD9keeXNVsVGtl8FC4l9ujG+bK5xODVYd1iGNDsCSf4sbq+JZcOhw2sgAeVmBP/QyDt8FrYkZzhGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "## Refactoring Plan for App Codebase\n\nBased on the comprehensive context gathered, I'll systematically refactor the codebase following modern Python best practices while maintaining 100% backward compatibility. Here's my approach:\n\n### Phase 1: Core Framework Stability (High Priority)\n1. **Error Handling System**\n   - Create custom exception hierarchy (`app/core/exceptions.py`)\n   - Replace generic `Exception` catches with specific types\n   - Implement proper error propagation and logging\n\n2. **Type Safety Enhancement**\n   - Add comprehensive type hints using Python 3.9+ syntax (`list[str]` vs `List[str]`)\n   - Replace `Dict[str, Any]` with specific TypedDict or Pydantic models\n   - Use Protocol classes for agent interfaces\n\n3. **Validation Framework Refactoring**\n   - Break down `EnhancedValidationOrchestrator` into focused components\n   - Create separate validators for different validation types\n   - Implement strategy pattern for validation rules\n\n4. **Agent System Redesign**\n   - Define clear interfaces using Protocol classes\n   - Separate agent responsibilities more clearly\n   - Reduce coupling between agents\n\n### Phase 2: Code Organization (Medium Priority)\n- Standardize plugin patterns\n- Create utility modules for common operations\n- Improve configuration validation\n\n### Phase 3: Code Quality (Lower Priority)\n- Add comprehensive docstrings\n- Standardize naming conventions\n- Eliminate remaining code duplication\n\nI'll start with creating the custom exception hierarchy and then systematically work through each area. Shall I proceed with the implementation?"
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "proceed"
+  },
+  {
+    "role": "user",
+    "content": "<user-prompt-submit-hook>[[ ultrathink ]]\n[DAIC: Implementation Mode Activated] You may now implement ONLY the immediately discussed steps. DO NOT take **any** actions beyond what was explicitly agreed upon. If instructions were vague, consider the bounds of what was requested and *DO NOT* cross them. When you're done, run the command: daic\n</user-prompt-submit-hook>"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "The user has approved proceeding with the refactoring. I'm now in implementation mode. Based on my plan, I should start with Phase 1: Core Framework Stability, specifically:\n\n1. Create custom exception hierarchy\n2. Replace generic Exception catches with specific types\n3. Add comprehensive type hints\n4. Refactor the validation framework\n5. Redesign the agent system\n\nLet me start by creating the custom exception hierarchy first, then work through the other items systematically.",
+        "signature": "EooFCkYIBxgCKkAvyrXy7Up0OTjQ+k+ovWzF3qv7HstW0xTd+v+ElV6YDNQoo/3ko4z+ytskAeUzPYYcSrkIh93C20edgxoRl3BKEgwE9mC4OjiVwfwhY7UaDM5qsqwEO70eZx7q/iIwdnD277iL2Xb8bpzWWrv4FWxu9YKB6d847pDS1uHCUuXLO6vNc8nyQXAEh/VVhaVJKvEDAtX8IXnSrXT034+dS3DYuk/vCp8y8uciWJ3/mQBFvi/QOtzfKMh/OQjqs1k0k+YWY0Y/A+H+inRytPlFQRRlR8KncsFhQ07em/Nzvb8yFyxmcwbEB1K1CpEb6tFN7s8b93B6WmRdDuHmZ/mzKdJjqIX87BNXziqa9cAnhYLxmCP3EiEIv0vTGyCAoBwySCcCECTrTcZRVVggoAQDPzDG/EFDndHKrknCkUvj0b0j3MozUQ5l1muXi0ZeFdBFkkMfB4DxkDp8qBlrZhQ3hl6mrtSrUn6HMS8uJhhVVSwL3902ubtx6GKXXurZ/3TYYTK7sUTMBoiB1HxlD8U51TNwiN8DtoZxh5pPT9/r14REBqpYh3YrRYOCJwv5S9M7usuWhIiW+yPkgGJSp15z2JJjl2/kHdPmGy4V6gk82VvoMM2hVnSnGOvy64YWSSL+JqgxNk/JZidlpxK9IngYLEX/yMIzfHLnWrQr58ZPv3GLZoOXk45j9E2niOi0O5h83KzmmThvDFdMN+OgH0YeL7vTbEnCcl5nDwQtEQJUzT6w/2SLwNgij3bCdgl9o5NfaQKcs4eHgzL6lofbZqhUL4V168wxcsZCu7g0HJMaRDQyqk73CxRiQ86ej+M/fXocst0n0dKmekseZ0AS+chVGpb8jMIYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01F1qcNEwBut4bSb8Y2q7yUq",
+        "name": "TodoWrite",
+        "input": {
+          "todos": [
+            {
+              "content": "Create custom exception classes for consistent error handling",
+              "status": "in_progress",
+              "activeForm": "Creating custom exception classes for consistent error handling"
+            },
+            {
+              "content": "Add comprehensive type hints to core framework modules",
+              "status": "pending",
+              "activeForm": "Adding comprehensive type hints to core framework modules"
+            },
+            {
+              "content": "Refactor EnhancedValidationOrchestrator into smaller components",
+              "status": "pending",
+              "activeForm": "Refactoring EnhancedValidationOrchestrator into smaller components"
+            },
+            {
+              "content": "Standardize agent interfaces and improve separation of concerns",
+              "status": "pending",
+              "activeForm": "Standardizing agent interfaces and improving separation of concerns"
+            },
+            {
+              "content": "Replace generic Exception catches with specific error types",
+              "status": "pending",
+              "activeForm": "Replacing generic Exception catches with specific error types"
+            },
+            {
+              "content": "Create reusable utilities to eliminate code duplication",
+              "status": "pending",
+              "activeForm": "Creating reusable utilities to eliminate code duplication"
+            },
+            {
+              "content": "Standardize naming conventions across all modules",
+              "status": "pending",
+              "activeForm": "Standardizing naming conventions across all modules"
+            },
+            {
+              "content": "Add comprehensive docstrings to all public methods",
+              "status": "pending",
+              "activeForm": "Adding comprehensive docstrings to all public methods"
+            },
+            {
+              "content": "Run tests to ensure no functionality is broken",
+              "status": "pending",
+              "activeForm": "Running tests to ensure no functionality is broken"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01F1qcNEwBut4bSb8Y2q7yUq",
+        "type": "tool_result",
+        "content": "Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I'll create a custom exception hierarchy file first. This will provide specific exception types for different error scenarios in the framework.",
+        "signature": "ErkCCkYIBxgCKkCMsWTT91jouuTH3Sgrx3tldwOQTbK7T6eBpIZqbAjnAX0o/YtcX9uT3S0JttQ5mA3J9CvitAfbF8zP+JR8Q1RSEgz6kddUkMs5c2Ibb6AaDM7eewqRnjMCrkNy0CIwy4qbTsbZCYKr4C3LCBqjyZJWFcfaTzcAK7KCsbxA9tXtZADQAP/gEb0m+8uyo6BWKqABoDwUobeC98nP/dpVHqJQQTNAShBsrxZCr9J3fwJuXXuinEZO3t+lkmJRXscwfe2O/kK8ByNt+j3czYQDiTK3oWiz/idikmmvefguTpA+Hk9Ps/OTTgueiUD+tZsLp46fAAJCDtOzQdKbT6SPRjbpi68m2RP5P6dXU994/dKhS+eGPZZYY1r35YaLDAZfnZomvvCNEC4KRoxydE8sGhVUOxgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_019Q5x9HNCftSTievE1C5pqe",
+        "name": "Write",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/exceptions.py",
+          "content": "\"\"\"\nCustom exception hierarchy for the document generation framework.\n\nThis module provides a structured exception hierarchy for better error handling\nand debugging throughout the application.\n\"\"\"\n\nfrom typing import Optional, Any, dict\n\n\nclass DocumentFrameworkError(Exception):\n    \"\"\"Base exception for all document framework errors.\"\"\"\n    \n    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(message)\n        self.message = message\n        self.details = details or {}\n\n\nclass PluginError(DocumentFrameworkError):\n    \"\"\"Raised when plugin-related errors occur.\"\"\"\n    \n    def __init__(self, plugin_id: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"Plugin '{plugin_id}' error: {message}\", details)\n        self.plugin_id = plugin_id\n\n\nclass PluginNotFoundError(PluginError):\n    \"\"\"Raised when a requested plugin cannot be found.\"\"\"\n    \n    def __init__(self, plugin_id: str):\n        super().__init__(plugin_id, f\"Plugin '{plugin_id}' not found\")\n\n\nclass PluginLoadError(PluginError):\n    \"\"\"Raised when a plugin fails to load.\"\"\"\n    \n    def __init__(self, plugin_id: str, reason: str):\n        super().__init__(plugin_id, f\"Failed to load: {reason}\")\n\n\nclass ValidationError(DocumentFrameworkError):\n    \"\"\"Raised when validation fails.\"\"\"\n    \n    def __init__(self, field: str, message: str, value: Any = None):\n        details = {\"field\": field}\n        if value is not None:\n            details[\"value\"] = value\n        super().__init__(f\"Validation error for '{field}': {message}\", details)\n        self.field = field\n        self.value = value\n\n\nclass TemplateError(DocumentFrameworkError):\n    \"\"\"Raised when template-related errors occur.\"\"\"\n    \n    def __init__(self, template_path: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"Template '{template_path}' error: {message}\", details)\n        self.template_path = template_path\n\n\nclass TemplateNotFoundError(TemplateError):\n    \"\"\"Raised when a template file cannot be found.\"\"\"\n    \n    def __init__(self, template_path: str):\n        super().__init__(template_path, \"Template file not found\")\n\n\nclass TemplateRenderError(TemplateError):\n    \"\"\"Raised when template rendering fails.\"\"\"\n    \n    def __init__(self, template_path: str, reason: str):\n        super().__init__(template_path, f\"Rendering failed: {reason}\")\n\n\nclass ExtractionError(DocumentFrameworkError):\n    \"\"\"Raised when document extraction fails.\"\"\"\n    \n    def __init__(self, message: str, document_type: Optional[str] = None, details: Optional[dict[str, Any]] = None):\n        if details is None:\n            details = {}\n        if document_type:\n            details[\"document_type\"] = document_type\n        super().__init__(message, details)\n        self.document_type = document_type\n\n\nclass LLMError(DocumentFrameworkError):\n    \"\"\"Raised when LLM operations fail.\"\"\"\n    \n    def __init__(self, operation: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"LLM {operation} failed: {message}\", details)\n        self.operation = operation\n\n\nclass AgentError(DocumentFrameworkError):\n    \"\"\"Raised when agent operations fail.\"\"\"\n    \n    def __init__(self, agent_name: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"Agent '{agent_name}' error: {message}\", details)\n        self.agent_name = agent_name\n\n\nclass AgentCommunicationError(AgentError):\n    \"\"\"Raised when agents fail to communicate properly.\"\"\"\n    \n    def __init__(self, sender: str, receiver: str, message: str):\n        super().__init__(\n            sender, \n            f\"Communication with '{receiver}' failed: {message}\",\n            {\"sender\": sender, \"receiver\": receiver}\n        )\n        self.sender = sender\n        self.receiver = receiver\n\n\nclass ConfigurationError(DocumentFrameworkError):\n    \"\"\"Raised when configuration is invalid or missing.\"\"\"\n    \n    def __init__(self, config_key: str, message: str):\n        super().__init__(f\"Configuration error for '{config_key}': {message}\", {\"config_key\": config_key})\n        self.config_key = config_key\n\n\nclass PDFProcessingError(DocumentFrameworkError):\n    \"\"\"Raised when PDF processing fails.\"\"\"\n    \n    def __init__(self, filename: str, message: str, page: Optional[int] = None):\n        details = {\"filename\": filename}\n        if page is not None:\n            details[\"page\"] = page\n        super().__init__(f\"PDF processing error in '{filename}': {message}\", details)\n        self.filename = filename\n        self.page = page\n\n\nclass RAGPipelineError(DocumentFrameworkError):\n    \"\"\"Raised when RAG pipeline operations fail.\"\"\"\n    \n    def __init__(self, operation: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"RAG pipeline {operation} failed: {message}\", details)\n        self.operation = operation"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "content": "Write operation blocked by hook:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py]: [Branch Mismatch] Repository is on branch 'main' but task expects 'feature/refactor-app-codebase'. Please checkout the correct branch.\n",
+        "is_error": true,
+        "tool_use_id": "toolu_019Q5x9HNCftSTievE1C5pqe"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to switch to the correct branch first before making changes.",
+        "signature": "Eu0BCkYIBxgCKkDmkfwkeeClqElw0b+J7BPxwb133GcHf1HUqzNxrN2am+CZF1HmEs5Sigs+3hU2ocGIhaAMdGIeDwAYEQMEuLHPEgxbGJUlbJYFDRnJf6AaDEvGKUN1+qXXnZ/ZrSIw5iTNWOZdmChhepSAD8mD4KZhiSBaQd7+MBskwRUnnC/6j6UfqkyVmj6FF64JDf1tKlXSr/uGE0qX5w9uYbP2rkMj6Y9wPfy/vAipkOnyhz1B2qClmYAKfBgUWL0c1SXjFrS4DXkvoOOfA3SwL6D+aRtj/PUbnbWdRhZA8vP0Qo8k3ulWKKSCGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01R1ZUyEaU2VJZR9Xds9B4Sg",
+        "name": "Bash",
+        "input": {
+          "command": "git checkout -b feature/refactor-app-codebase",
+          "description": "Create and switch to feature branch"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01R1ZUyEaU2VJZR9Xds9B4Sg",
+        "type": "tool_result",
+        "content": "Switched to a new branch 'feature/refactor-app-codebase'",
+        "is_error": false
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Good, now I'm on the correct branch. Let me create the exceptions file again.",
+        "signature": "EvcBCkYIBxgCKkAo/Xqy1mdLwlxb+z4CqMVgjOWiNERhjpe99rXVuzYE1V9/4JZNoWgSJMZC8FDSwgdQ1EfLM3r2OOHejs5vaVYDEgxBLVCEq5/gEdI4ZVwaDIr7RjTK8piRxBQuJyIw0Wvn2N4oIfwj9uWqg9Wxnr7QqFtdeoVnHXU+eyBo/9FA5lHmI0BgIlcQjfVEbV7TKl+Iobc6UVX0r3nqH90iAMbnFGqY69/qVIz18CHjsytvbMCm3+B/41g1MXDZC66ThVzbrNu/LNPFtdjHQgm0YgeOXw61sJd57shNQ4oIEvBwVsq/2ea8AM32MZEZ6FDunRgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01JYqnyzSBXSAbCpvwrYQfdo",
+        "name": "Write",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/exceptions.py",
+          "content": "\"\"\"\nCustom exception hierarchy for the document generation framework.\n\nThis module provides a structured exception hierarchy for better error handling\nand debugging throughout the application.\n\"\"\"\n\nfrom typing import Optional, Any, dict\n\n\nclass DocumentFrameworkError(Exception):\n    \"\"\"Base exception for all document framework errors.\"\"\"\n    \n    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(message)\n        self.message = message\n        self.details = details or {}\n\n\nclass PluginError(DocumentFrameworkError):\n    \"\"\"Raised when plugin-related errors occur.\"\"\"\n    \n    def __init__(self, plugin_id: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"Plugin '{plugin_id}' error: {message}\", details)\n        self.plugin_id = plugin_id\n\n\nclass PluginNotFoundError(PluginError):\n    \"\"\"Raised when a requested plugin cannot be found.\"\"\"\n    \n    def __init__(self, plugin_id: str):\n        super().__init__(plugin_id, f\"Plugin '{plugin_id}' not found\")\n\n\nclass PluginLoadError(PluginError):\n    \"\"\"Raised when a plugin fails to load.\"\"\"\n    \n    def __init__(self, plugin_id: str, reason: str):\n        super().__init__(plugin_id, f\"Failed to load: {reason}\")\n\n\nclass ValidationError(DocumentFrameworkError):\n    \"\"\"Raised when validation fails.\"\"\"\n    \n    def __init__(self, field: str, message: str, value: Any = None):\n        details = {\"field\": field}\n        if value is not None:\n            details[\"value\"] = value\n        super().__init__(f\"Validation error for '{field}': {message}\", details)\n        self.field = field\n        self.value = value\n\n\nclass TemplateError(DocumentFrameworkError):\n    \"\"\"Raised when template-related errors occur.\"\"\"\n    \n    def __init__(self, template_path: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"Template '{template_path}' error: {message}\", details)\n        self.template_path = template_path\n\n\nclass TemplateNotFoundError(TemplateError):\n    \"\"\"Raised when a template file cannot be found.\"\"\"\n    \n    def __init__(self, template_path: str):\n        super().__init__(template_path, \"Template file not found\")\n\n\nclass TemplateRenderError(TemplateError):\n    \"\"\"Raised when template rendering fails.\"\"\"\n    \n    def __init__(self, template_path: str, reason: str):\n        super().__init__(template_path, f\"Rendering failed: {reason}\")\n\n\nclass ExtractionError(DocumentFrameworkError):\n    \"\"\"Raised when document extraction fails.\"\"\"\n    \n    def __init__(self, message: str, document_type: Optional[str] = None, details: Optional[dict[str, Any]] = None):\n        if details is None:\n            details = {}\n        if document_type:\n            details[\"document_type\"] = document_type\n        super().__init__(message, details)\n        self.document_type = document_type\n\n\nclass LLMError(DocumentFrameworkError):\n    \"\"\"Raised when LLM operations fail.\"\"\"\n    \n    def __init__(self, operation: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"LLM {operation} failed: {message}\", details)\n        self.operation = operation\n\n\nclass AgentError(DocumentFrameworkError):\n    \"\"\"Raised when agent operations fail.\"\"\"\n    \n    def __init__(self, agent_name: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"Agent '{agent_name}' error: {message}\", details)\n        self.agent_name = agent_name\n\n\nclass AgentCommunicationError(AgentError):\n    \"\"\"Raised when agents fail to communicate properly.\"\"\"\n    \n    def __init__(self, sender: str, receiver: str, message: str):\n        super().__init__(\n            sender, \n            f\"Communication with '{receiver}' failed: {message}\",\n            {\"sender\": sender, \"receiver\": receiver}\n        )\n        self.sender = sender\n        self.receiver = receiver\n\n\nclass ConfigurationError(DocumentFrameworkError):\n    \"\"\"Raised when configuration is invalid or missing.\"\"\"\n    \n    def __init__(self, config_key: str, message: str):\n        super().__init__(f\"Configuration error for '{config_key}': {message}\", {\"config_key\": config_key})\n        self.config_key = config_key\n\n\nclass PDFProcessingError(DocumentFrameworkError):\n    \"\"\"Raised when PDF processing fails.\"\"\"\n    \n    def __init__(self, filename: str, message: str, page: Optional[int] = None):\n        details = {\"filename\": filename}\n        if page is not None:\n            details[\"page\"] = page\n        super().__init__(f\"PDF processing error in '{filename}': {message}\", details)\n        self.filename = filename\n        self.page = page\n\n\nclass RAGPipelineError(DocumentFrameworkError):\n    \"\"\"Raised when RAG pipeline operations fail.\"\"\"\n    \n    def __init__(self, operation: str, message: str, details: Optional[dict[str, Any]] = None):\n        super().__init__(f\"RAG pipeline {operation} failed: {message}\", details)\n        self.operation = operation"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01JYqnyzSBXSAbCpvwrYQfdo",
+        "type": "tool_result",
+        "content": "File created successfully at: /mnt/d/Common_Resources/irb-ki-summary/app/core/exceptions.py"
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "Write operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I've created the custom exception hierarchy. Now I should continue with replacing generic Exception catches with these specific error types. Let me look for places where generic exceptions are being caught and update them.",
+        "signature": "EogDCkYIBxgCKkBTpD8iFsc5iOli5A9XCiwFBJ1l4GhB3IIhYscuqHoO0e6WqqyyrD2k/LklEfrs/HsncceeZFz1uvoJklXwKal5EgxsHWrIT87Sk6kp+LUaDBSFpGAh7JVVaBXQySIw0QGONcvp1vbRYlVti6vr3hp0sfgaNXJLM62VGEUoKh65/h3B9Ma5gzffRrEROJDAKu8BCNAw9+qD9LiW5HbdQpa+OyiDDS9lDsKzacvm70NzGAmPyHhs2IdF7iB/zZNkPbU82d1ViCeUv7VczNJ6cu90UUjzqj+se/3PxycR4MPZVg6bIiqvu7GgrGYgfhAkZCVV0VkdwjeTYn1UP3cD5WfuhmOTE/5TZpES9bM1DAPKeLhbSQ9LcLJXVhT4njIOYnlH6uUydc1OPfc6p3Ds+t/9WC/Y8pMokWU+Edj5j+7uK8Xt+/U1I9+bB0t3HhwcesqoVfaLU+vP+Rb38D9bRNxu3leL+j9/J5Gu7v8O0SnYNrxXRoYNLi04ga46aMcHt6sYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01FcxchYr7nhKcyUR3uR9RfR",
+        "name": "TodoWrite",
+        "input": {
+          "todos": [
+            {
+              "content": "Create custom exception classes for consistent error handling",
+              "status": "completed",
+              "activeForm": "Creating custom exception classes for consistent error handling"
+            },
+            {
+              "content": "Add comprehensive type hints to core framework modules",
+              "status": "pending",
+              "activeForm": "Adding comprehensive type hints to core framework modules"
+            },
+            {
+              "content": "Refactor EnhancedValidationOrchestrator into smaller components",
+              "status": "pending",
+              "activeForm": "Refactoring EnhancedValidationOrchestrator into smaller components"
+            },
+            {
+              "content": "Standardize agent interfaces and improve separation of concerns",
+              "status": "pending",
+              "activeForm": "Standardizing agent interfaces and improving separation of concerns"
+            },
+            {
+              "content": "Replace generic Exception catches with specific error types",
+              "status": "in_progress",
+              "activeForm": "Replacing generic Exception catches with specific error types"
+            },
+            {
+              "content": "Create reusable utilities to eliminate code duplication",
+              "status": "pending",
+              "activeForm": "Creating reusable utilities to eliminate code duplication"
+            },
+            {
+              "content": "Standardize naming conventions across all modules",
+              "status": "pending",
+              "activeForm": "Standardizing naming conventions across all modules"
+            },
+            {
+              "content": "Add comprehensive docstrings to all public methods",
+              "status": "pending",
+              "activeForm": "Adding comprehensive docstrings to all public methods"
+            },
+            {
+              "content": "Run tests to ensure no functionality is broken",
+              "status": "pending",
+              "activeForm": "Running tests to ensure no functionality is broken"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01FcxchYr7nhKcyUR3uR9RfR",
+        "type": "tool_result",
+        "content": "Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me search for generic Exception catches in the codebase that need to be replaced with our new specific exception types.",
+        "signature": "EqUCCkYIBxgCKkC5uqkldYD7gzTLsOvdPpRWZshK6GH4hW854fPRb7erCE4Y5JVO2fMSObWmZXBhzd5WKynFGPGx7aJehOcpJbqREgxKr5V5xBddBNwLMZIaDFln8xmz0qhmzBb/YSIwhH86BzZXaJja8opk6bxsZiZq/5Jl+uwX263p5Oyy+9K9lXZ4w3+jkFzN4oVJHFOhKowBLohOGUcD3YYkzQPH5l1euwo+Ai7+BcNPBvTOqNZmdCeI/51xpJy70JIiCHjrNckYTh6lLelMa8dEWy2WNSarTEn4FCAq8ORfe01wFnMO9n0hz3fOhXdC/U9jRYeKnh1AqvvUp/AdILLhywK4elJh2uhl9jqfAa/JMbND52CISFIHAFnBHcaFJFezmO0YAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01LtVmy81WveDw5qzmcmXTv2",
+        "name": "Grep",
+        "input": {
+          "pattern": "except.*Exception",
+          "path": "/mnt/d/Common_Resources/irb-ki-summary/app",
+          "output_mode": "content",
+          "-n": true
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01LtVmy81WveDw5qzmcmXTv2",
+        "type": "tool_result",
+        "content": "/mnt/d/Common_Resources/irb-ki-summary/app/logger.py:65:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/main.py:221:    except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/plugins/informed_consent_plugin.py:381:            except Exception:\n/mnt/d/Common_Resources/irb-ki-summary/app/plugins/informed_consent_plugin.py:385:        except Exception:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:91:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:124:            except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:169:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:206:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:242:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:286:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py:318:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py:482:        except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/plugin_manager.py:156:            except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py:143:                except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/multi_agent_system.py:164:                    except Exception as e:\n/mnt/d/Common_Resources/irb-ki-summary/app/core/template_engine.py:148:        except Exception as e:"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now let me read these files and update the generic exception handling with our new specific exception types. I'll start with the core modules.",
+        "signature": "ErgCCkYIBxgCKkAhpfvipq5XpbaBpfuHIXPnBv4ZtTMeDZ5F3nhFxFedPkgg/Pn5XnmwLoR/xDsQ4wVcTckn/lYkimyBMHMjnYh2EgyV9Zf0tO6raVjjOX8aDMFEA+9fdrwZ5Z0x/CIwzV/stW7NO+G4/rOtE3m0RIqzxH57I/db5dL5Q5SaOCQGnMC1kclLRr7I+4ydNH6nKp8BSVVCqZ1urctkh/aRV+6/PZa1P35uSNA2EP6n9AZAVYvDhjJAd9L+X3BVn/RWipC4YH5KwWobAbN+XbB5KlDlgBpFHgV/7HQgWV+uhaaMe1GECiJVcODwhtTsFm9ViqAWi1jxjgegNBk5c2/jrB+B0LWb61hiVf+LsD9m+M1kiZULHXuSN2NQ83guLCZoZY/+MTzbPW8c0FPhYJ+Ss8b6GAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Hjfnk5VnwKmXGGijvK6Xvv",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py",
+          "limit": 100
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01Hjfnk5VnwKmXGGijvK6Xvv",
+        "type": "tool_result",
+        "content": "     1→\"\"\"\n     2→Generic Azure OpenAI Integration with Structured Outputs\n     3→Provides base LLM functionality with Pydantic model support\n     4→\"\"\"\n     5→import os\n     6→import json\n     7→from typing import Dict, Any, List, Optional, Union, Type\n     8→from dotenv import load_dotenv\n     9→from pathlib import Path\n    10→from pydantic import BaseModel\n    11→from llama_index.llms.azure_openai import AzureOpenAI as AzureOpenAILLM\n    12→from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding\n    13→from llama_index.core.llms import ChatMessage\n    14→from llama_index.core.prompts import PromptTemplate\n    15→\n    16→# Load environment variables from app/.env\n    17→env_path = Path(__file__).parent.parent / '.env'\n    18→load_dotenv(env_path)\n    19→\n    20→\n    21→class GenericLLMExtractor:\n    22→    \"\"\"\n    23→    Generic Azure OpenAI client for document extraction\n    24→    \"\"\"\n    25→    \n    26→    def __init__(self):\n    27→        \"\"\"Initialize Azure OpenAI client using LlamaIndex with structured output support\"\"\"\n    28→        organization = os.getenv(\"ORGANIZATION\", \"231173\")\n    29→        api_key = os.getenv(\"AZURE_OPENAI_API_KEY\")\n    30→        azure_endpoint = os.getenv(\"AZURE_OPENAI_ENDPOINT\")\n    31→        # Use latest API version for structured outputs\n    32→        api_version = os.getenv(\"API_VERSION\", \"2024-10-21\")\n    33→        \n    34→        # Use LlamaIndex Azure OpenAI client with structured output support\n    35→        self.llm = AzureOpenAILLM(\n    36→            model=\"gpt-4o\",\n    37→            engine=\"gpt-4o\",\n    38→            deployment_name=os.getenv(\"AZURE_OPENAI_DEPLOYMENT_LLM\", \"text-embedding-3-small\"),\n    39→            api_key=api_key,\n    40→            azure_endpoint=azure_endpoint,\n    41→            api_version=api_version,\n    42→            default_headers={\"OpenAI-Organization\": organization, \"Shortcode\": organization},\n    43→            temperature=0,  # Minimum temperature for consistency\n    44→            top_p=0.0,      # Deterministic sampling\n    45→            organization=organization,\n    46→        )\n    47→        \n    48→        self.deployment = os.getenv(\"DEPLOYMENT_ID\", \"gpt-4o\")\n    49→    \n    50→    async def extract_structured(self,\n    51→                                document_context: str,\n    52→                                output_cls: Type[BaseModel],\n    53→                                system_prompt: str = None) -> BaseModel:\n    54→        \"\"\"\n    55→        Extract structured data using Pydantic models with guaranteed schema compliance\n    56→        \n    57→        Args:\n    58→            document_context: Document text to extract from\n    59→            output_cls: Pydantic model class defining the output structure\n    60→            system_prompt: Optional custom system prompt\n    61→            \n    62→        Returns:\n    63→            Instance of the Pydantic model with extracted data\n    64→        \"\"\"\n    65→        try:\n    66→            # Build system prompt\n    67→            if not system_prompt:\n    68→                system_prompt = (\n    69→                    \"You are an expert at extracting structured information from documents. \"\n    70→                    \"Extract the requested information accurately and concisely. \"\n    71→                    \"Follow the schema requirements strictly.\"\n    72→                )\n    73→            \n    74→            # Convert LLM to structured LLM with Pydantic model\n    75→            structured_llm = self.llm.as_structured_llm(output_cls=output_cls)\n    76→            \n    77→            # Build messages\n    78→            messages = [\n    79→                ChatMessage(role=\"system\", content=system_prompt),\n    80→                ChatMessage(role=\"user\", content=f\"Extract information from this document:\\n\\n{document_context[:8000]}\")\n    81→            ]\n    82→            \n    83→            # Get structured response\n    84→            response = structured_llm.chat(messages)\n    85→            \n    86→            # The response.raw contains the Pydantic model instance\n    87→            result = response.raw\n    88→            \n    89→            return result\n    90→            \n    91→        except Exception as e:\n    92→            print(f\"Structured extraction error: {e}\")\n    93→            # Return default instance on error\n    94→            return output_cls()\n    95→    \n    96→    async def extract_json(self, \n    97→                          document_context: str,\n    98→                          extraction_schema: Dict[str, Any],\n    99→                          system_prompt: str = None) -> Dict[str, Any]:\n   100→        \"\"\"\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me continue reading the llm_integration.py file to see all the generic Exception catches that need to be replaced.",
+        "signature": "EqECCkYIBxgCKkDweT6Rj6bGrNiYw6fH8i+WcS90yAvLP2qetwj5E+y5t+a5cyOAAWclGpbtH0lv9YnM8tR0uIRg7Ca6RZiwT+kPEgxH/ylj8uZNG+68vjoaDPN+Z5T4qQ0j2zrCFSIwQAFdzuHer3c0eq2Fck5avqx1aYx0o5fZ0fHhDdUuFEbD365epmvrtI6p1LlB+HmtKogBC9RBLpxxFQyrBVajjUOkYrpQUvfxU3bqwtnQx6LKIF6uRD5vycFxrhMQDwK13Oi/nHywWJBqjIFACJngSFBpdlQXDEATIXNDQK/WxA+CviPRD9b9zsPbxKAstDkjJnBx6BHNH/iNw1QJbDDBhbuH9Y1I9cBOI2P5pBLheo7fUv4Pmk6kjf0lURgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01PrJKAvPKiNqLRyn18wGnGQ",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/llm_integration.py",
+          "offset": 90,
+          "limit": 250
+        }
+      }
+    ]
+  }
+]

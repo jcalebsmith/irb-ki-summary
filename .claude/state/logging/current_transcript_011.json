@@ -1,0 +1,453 @@
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01GqiUy3XUMcpvA6YtARgV38",
+        "type": "tool_result",
+        "content": "    80→        \"\"\"Calculate structural consistency based on content hashes\"\"\"\n    81→        if len(self.content_hashes) < 2:\n    82→            return 1.0\n    83→        unique_hashes = len(set(self.content_hashes))\n    84→        return 1.0 - (unique_hashes - 1) / len(self.content_hashes)\n    85→\n    86→\n    87→class EnhancedValidationOrchestrator:\n    88→    \"\"\"Enhanced validation with strict consistency checking\"\"\"\n    89→    \n    90→    def __init__(self):\n    91→        self.validators = {}\n    92→        self.consistency_metrics = defaultdict(ConsistencyMetrics)\n    93→        # Use constants from types module for better maintainability\n    94→        self.prohibited_phrases = ValidationConstants.PROHIBITED_PHRASES\n    95→    \n    96→    def validate(self,\n    97→                 original: Dict[str, Any],\n    98→                 rendered: str,\n    99→                 rules: ValidationRuleSet,\n   100→                 critical_values: List[str],\n   101→                 document_type: str = \"default\") -> Dict[str, Any]:\n   102→        \"\"\"\n   103→        Enhanced validation with consistency metrics\n   104→        \n   105→        Returns:\n   106→            Comprehensive validation results with consistency metrics\n   107→        \"\"\"\n   108→        results = {\n   109→            \"passed\": True,\n   110→            \"issues\": [],\n   111→            \"warnings\": [],\n   112→            \"info\": [],\n   113→            \"consistency_metrics\": {},\n   114→            \"content_analysis\": {}\n   115→        }\n   116→        \n   117→        # Basic validation checks\n   118→        results = self._validate_required_fields(original, rules, results)\n   119→        results = self._validate_lengths(original, rendered, rules, results)\n   120→        results = self._validate_allowed_values(original, rules, results)\n   121→        \n   122→        # Enhanced consistency checks\n   123→        results = self._check_prohibited_phrases(rendered, results)\n   124→        results = self._validate_critical_values(original, rendered, critical_values, results)\n   125→        results = self._check_structural_consistency(rendered, results)\n   126→        results = self._check_sentence_quality(rendered, results)\n   127→        \n   128→        # Track consistency metrics\n   129→        self._track_consistency_metrics(rendered, document_type)\n   130→        \n   131→        # Add consistency thresholds check if provided in rules\n   132→        if hasattr(rules, 'consistency_thresholds'):\n   133→            results = self._check_consistency_thresholds(rules.consistency_thresholds, results)\n   134→        \n   135→        # Calculate overall consistency score\n   136→        results[\"consistency_metrics\"] = self._calculate_consistency_score(document_type)\n   137→        \n   138→        return results\n   139→    \n   140→    def _validate_required_fields(self, original: Dict[str, Any], \n   141→                                 rules: ValidationRuleSet, \n   142→                                 results: Dict) -> Dict:\n   143→        \"\"\"Validate required fields are present\"\"\"\n   144→        for field in rules.required_fields:\n   145→            if field not in original or not original[field]:\n   146→                results[\"issues\"].append(f\"Required field missing: {field}\")\n   147→                results[\"passed\"] = False\n   148→        return results\n   149→    \n   150→    def _validate_lengths(self, original: Dict[str, Any], \n   151→                        rendered: str,\n   152→                        rules: ValidationRuleSet, \n   153→                        results: Dict) -> Dict:\n   154→        \"\"\"Validate field and section lengths\"\"\"\n   155→        # Check field lengths\n   156→        for field, max_length in rules.max_lengths.items():\n   157→            if field in original:\n   158→                field_length = len(str(original[field]))\n   159→                if field_length > max_length:\n   160→                    results[\"warnings\"].append(\n   161→                        f\"Field {field} exceeds max length: {field_length} > {max_length}\"\n   162→                    )\n   163→        \n   164→        # Check overall document length\n   165→        word_count = len(rendered.split())\n   166→        results[\"content_analysis\"][\"word_count\"] = word_count\n   167→        results[\"content_analysis\"][\"character_count\"] = len(rendered)\n   168→        \n   169→        return results\n   170→    \n   171→    def _validate_allowed_values(self, original: Dict[str, Any],\n   172→                                rules: ValidationRuleSet,\n   173→                                results: Dict) -> Dict:\n   174→        \"\"\"Validate fields contain allowed values\"\"\"\n   175→        # Debug check for proper type\n   176→        if not isinstance(original, dict):\n   177→            logger.error(f\"_validate_allowed_values received non-dict type: {type(original)}\")\n   178→            logger.error(f\"Value is: {original}\")\n   179→            # Convert to dict if possible\n   180→            if hasattr(original, '__dict__'):\n   181→                original = vars(original)\n   182→                logger.error(f\"Converted to dict with keys: {original.keys()}\")\n   183→            else:\n   184→                results[\"issues\"].append(f\"Cannot validate: original is {type(original)}, not dict\")\n   185→                return results\n   186→                \n   187→        for field, allowed in rules.allowed_values.items():\n   188→            if field in original:\n   189→                value = original[field]\n   190→                if value not in allowed:\n   191→                    results[\"issues\"].append(\n   192→                        f\"Field {field} has invalid value: '{value}' not in {allowed}\"\n   193→                    )\n   194→                    results[\"passed\"] = False\n   195→        return results\n   196→    \n   197→    def _check_prohibited_phrases(self, rendered: str, results: Dict) -> Dict:\n   198→        \"\"\"Check for prohibited phrases that indicate LLM artifacts\"\"\"\n   199→        found_phrases = []\n   200→        for phrase in self.prohibited_phrases:\n   201→            if phrase.lower() in rendered.lower():\n   202→                found_phrases.append(phrase)\n   203→        \n   204→        if found_phrases:\n   205→            results[\"issues\"].append(f\"Prohibited phrases found: {', '.join(found_phrases)}\")\n   206→            results[\"passed\"] = False\n   207→        \n   208→        return results\n   209→    \n   210→    def _validate_critical_values(self, original: Dict[str, Any],\n   211→                                 rendered: str,\n   212→                                 critical_values: List[str],\n   213→                                 results: Dict) -> Dict:\n   214→        \"\"\"Validate critical values are preserved exactly\"\"\"\n   215→        preserved = 0\n   216→        total = 0\n   217→        \n   218→        for critical_field in critical_values:\n   219→            if critical_field in original:\n   220→                total += 1\n   221→                critical_value = str(original[critical_field])\n   222→                if critical_value in rendered:\n   223→                    preserved += 1\n   224→                else:\n   225→                    results[\"issues\"].append(\n   226→                        f\"Critical value '{critical_value}' for field '{critical_field}' not preserved\"\n   227→                    )\n   228→                    results[\"passed\"] = False\n   229→        \n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I can see the EnhancedValidationOrchestrator is a monolithic class with many responsibilities. Let me continue reading to understand the full scope of the class before refactoring it.",
+        "signature": "EuECCkYIBxgCKkB8qjy6eeq6XHq7mNEJDxM8QbXH5tkiu/pn71HsuwlKqNK2bMVOgSaONByvaDJ1XlrmRccfxq/BDS8Hqwkaus+sEgxdFG/LhvuEn/BefvwaDODBT6wz2gVFTJTNsSIwBCSzbmYiVb2vKnCBX9WLwsV8vlm3IqEZ0tdUjOx6AI0xNw7di0Q65gwtnnqUf6QdKsgBkTMbflLGU7tNWzofdgzTia3PuVZF2e2VlPYh8LlHlHZNQ3g0jrPSxZBY/c2eEkOD+llSZDBUFc6LoZ37Xz7aNX4KHLXd/3VUFFJliZmsPRwfMxeE9e0rCO4/qaAr8zLM8yr3IP5088sOhCireGQ9WcPI1kftTRlEDIHsEJc6fAPVHsIbtWJNDuQ3dhVigCOiscdUnHx93/7SVotWWz56AZ/uVa7CPcr5J3SPhRDgNZtFwNqVJL1Z9NNApntvLKWeQopHM/zyFN4YAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01TCK41iF2JuNw3YZgvUfJFh",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "offset": 230,
+          "limit": 150
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01TCK41iF2JuNw3YZgvUfJFh",
+        "type": "tool_result",
+        "content": "   230→        if total > 0:\n   231→            preservation_rate = preserved / total\n   232→            results[\"content_analysis\"][\"critical_value_preservation\"] = preservation_rate\n   233→            \n   234→            if preservation_rate < 1.0:\n   235→                results[\"warnings\"].append(\n   236→                    f\"Critical value preservation rate: {preservation_rate:.1%}\"\n   237→                )\n   238→        \n   239→        return results\n   240→    \n   241→    def _check_structural_consistency(self, rendered: str, results: Dict) -> Dict:\n   242→        \"\"\"Check structural consistency of the output\"\"\"\n   243→        # Check for consistent section markers\n   244→        sections = re.findall(r'^Section \\d+', rendered, re.MULTILINE)\n   245→        if sections:\n   246→            unique_sections = len(set(sections))\n   247→            expected_sections = 9  # For KI summary\n   248→            if unique_sections != expected_sections:\n   249→                results[\"warnings\"].append(\n   250→                    f\"Section count mismatch: found {unique_sections}, expected {expected_sections}\"\n   251→                )\n   252→        \n   253→        # Check for consistent paragraph structure\n   254→        paragraphs = rendered.split('\\n\\n')\n   255→        paragraph_lengths = [len(p.split()) for p in paragraphs if p.strip()]\n   256→        \n   257→        if paragraph_lengths:\n   258→            avg_length = np.mean(paragraph_lengths)\n   259→            std_length = np.std(paragraph_lengths)\n   260→            cv = (std_length / avg_length * 100) if avg_length > 0 else 0\n   261→            \n   262→            results[\"content_analysis\"][\"paragraph_cv\"] = cv\n   263→            if cv > 50:  # High variability\n   264→                results[\"info\"].append(f\"High paragraph length variability: CV={cv:.1f}%\")\n   265→        \n   266→        return results\n   267→    \n   268→    def _check_sentence_quality(self, rendered: str, results: Dict) -> Dict:\n   269→        \"\"\"Check sentence structure and quality\"\"\"\n   270→        sentences = re.split(r'[.!?]+', rendered)\n   271→        sentences = [s.strip() for s in sentences if s.strip()]\n   272→        \n   273→        issues = []\n   274→        \n   275→        for sentence in sentences:\n   276→            # Check for sentences starting with lowercase\n   277→            if sentence and not sentence[0].isupper() and not sentence[0].isdigit():\n   278→                issues.append(\"Sentence starting with lowercase\")\n   279→            \n   280→            # Check for very short sentences (likely fragments)\n   281→            if len(sentence.split()) < 3:\n   282→                issues.append(\"Very short sentence fragment\")\n   283→            \n   284→            # Check for very long sentences\n   285→            if len(sentence.split()) > 50:\n   286→                issues.append(\"Excessively long sentence\")\n   287→        \n   288→        if issues:\n   289→            unique_issues = list(set(issues))\n   290→            results[\"warnings\"].extend(unique_issues[:3])  # Limit to 3 unique issues\n   291→        \n   292→        results[\"content_analysis\"][\"sentence_count\"] = len(sentences)\n   293→        \n   294→        return results\n   295→    \n   296→    def _check_consistency_thresholds(self, thresholds: Dict[str, float], \n   297→                                     results: Dict) -> Dict:\n   298→        \"\"\"Check if consistency thresholds are met\"\"\"\n   299→        if \"min_extraction_score\" in thresholds:\n   300→            # This would be populated by the extraction process\n   301→            pass\n   302→        \n   303→        if \"max_response_variation\" in thresholds:\n   304→            # Check variation in responses\n   305→            pass\n   306→        \n   307→        if \"required_cache_hit_rate\" in thresholds:\n   308→            # This would be tracked during extraction\n   309→            pass\n   310→        \n   311→        return results\n   312→    \n   313→    def _track_consistency_metrics(self, rendered: str, document_type: str):\n   314→        \"\"\"Track metrics for consistency analysis\"\"\"\n   315→        metrics = self.consistency_metrics[document_type]\n   316→        \n   317→        # Track content hash\n   318→        content_hash = hashlib.md5(rendered.encode()).hexdigest()[:8]\n   319→        metrics.content_hashes.append(content_hash)\n   320→        \n   321→        # Track word count\n   322→        word_count = len(rendered.split())\n   323→        metrics.word_counts.append(word_count)\n   324→        \n   325→        # Track sentence count\n   326→        sentence_count = len(re.split(r'[.!?]+', rendered))\n   327→        metrics.sentence_counts.append(sentence_count)\n   328→    \n   329→    def _calculate_consistency_score(self, document_type: str) -> Dict[str, Any]:\n   330→        \"\"\"Calculate overall consistency metrics\"\"\"\n   331→        metrics = self.consistency_metrics[document_type]\n   332→        \n   333→        if len(metrics.word_counts) < 2:\n   334→            return {\n   335→                \"runs_analyzed\": len(metrics.word_counts),\n   336→                \"insufficient_data\": True\n   337→            }\n   338→        \n   339→        cv = metrics.calculate_coefficient_of_variation()\n   340→        structural = metrics.calculate_structural_consistency()\n   341→        \n   342→        return {\n   343→            \"runs_analyzed\": len(metrics.word_counts),\n   344→            \"coefficient_of_variation\": cv,\n   345→            \"structural_consistency\": structural,\n   346→            \"mean_word_count\": np.mean(metrics.word_counts),\n   347→            \"std_word_count\": np.std(metrics.word_counts),\n   348→            \"unique_outputs\": len(set(metrics.content_hashes)),\n   349→            \"target_achieved\": cv < 15.0  # Target CV < 15%\n   350→        }\n   351→    \n   352→    def get_consistency_report(self, document_type: str = None) -> Dict[str, Any]:\n   353→        \"\"\"Generate comprehensive consistency report\"\"\"\n   354→        report = {\n   355→            \"overall_metrics\": {},\n   356→            \"by_document_type\": {}\n   357→        }\n   358→        \n   359→        if document_type:\n   360→            types = [document_type]\n   361→        else:\n   362→            types = list(self.consistency_metrics.keys())\n   363→        \n   364→        for doc_type in types:\n   365→            metrics = self.consistency_metrics[doc_type]\n   366→            if len(metrics.word_counts) > 0:\n   367→                report[\"by_document_type\"][doc_type] = {\n   368→                    \"runs\": len(metrics.word_counts),\n   369→                    \"cv\": metrics.calculate_coefficient_of_variation(),\n   370→                    \"structural_consistency\": metrics.calculate_structural_consistency(),\n   371→                    \"mean_word_count\": np.mean(metrics.word_counts),\n   372→                    \"unique_outputs\": len(set(metrics.content_hashes))\n   373→                }\n   374→        \n   375→        # Calculate overall metrics\n   376→        all_cvs = [m[\"cv\"] for m in report[\"by_document_type\"].values()]\n   377→        if all_cvs:\n   378→            report[\"overall_metrics\"] = {\n   379→                \"mean_cv\": np.mean(all_cvs),\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now I have a good understanding of the EnhancedValidationOrchestrator. It's doing too many things:\n1. Field validation (required, lengths, allowed values)\n2. Content quality checks (prohibited phrases, sentence quality)\n3. Structural consistency checks\n4. Critical value preservation\n5. Consistency metrics tracking\n6. Report generation\n\nI'll refactor this into smaller, focused validator classes following the Single Responsibility Principle. Let me create a new validators module with separate classes for each validation concern.",
+        "signature": "Er8FCkYIBxgCKkB84KN/8pIKF4J2pMptIfcnb3swdXVDlM1GAUHNps5KvM6mSvMM4qNhNfJMvfQcN8vATD92a3/yju8he0ctGis0Egwep163qPVMQWkBe/UaDOTyFrIPasnhTfW7wCIwS9+fv07VWZG+yg37R9JQlcpfjP0lh1iXXDxVAr2693Btd5dDdpT53gcoKtZwwhgXKqYEqyxnspIJVUKSL63IUxEQ0AFnXwotr22oPEK4f4FIdXks7KM6A3AIegBldhcFWcBG5Xc523A/lRftKafpUE0v6uCRehFMY+vtw+hdvuED3ddXmAH/0MQZMLmBSPDlbDPMaAKPZ80lLQAiIxqbykNpZPupZB59I2wWI8FY3v73TJ9w7kP0H8HviQ97bMA438Da3DYhzEUX5/DYJP5r16Fu1DuCIi5VABz9q6keYWVwE2TlLzBGRu9Ux8eVFoSsuOjEdJYUYmqXiWIpIbEehCo8YBD/n1e6ZbVCdNNaI4CC5ltnVLm70i6EcRKJ4qmssAbM8pfaGUIvm2W7+i2dy9o6grs1ZslengTfAax6acGGZ3vqv0X9p4NvHssZ79IDetY6tnFt4VMuC8hl33zLExyJpQp/CFDyAgy+GX2L4AJA+ckOjkbpUJNc2apoyxMGenzXP3xN+xa2DGiaCazSwOMy8GBS95PglMlLt/lwY0kmAWKEOkwwo9qcOVNm3gybPXxGwM0W4V9ykONZofudz9yUmnwsHz+eBRB33N4OG4mM9PpkR2qLbXvFLBJyUXbN6xV0AqlEkZC2pjvIpZkLezF+jO5D+3cAbZ85giMLoQ4it3SVP6eAE/U3gqkidQ688BRSmdjf+RNBRzXSGZcDr4quI05ciwG7gWOBrEshA8IkySyJepYAAxDIUyzTUS2DAgSagLO412LQrq0+8LR4b0uGPMDaXdtX4hgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01GGjTey1GiJxmvdc6uMNNrQ",
+        "name": "Write",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/validators.py",
+          "content": "\"\"\"\nModular validators for the document generation framework.\n\nThis module provides focused validator classes following the Single Responsibility Principle,\nreplacing the monolithic EnhancedValidationOrchestrator.\n\"\"\"\n\nfrom typing import Dict, Any, List, Optional, Set\nfrom abc import ABC, abstractmethod\nfrom dataclasses import dataclass, field\nimport re\nimport hashlib\nimport numpy as np\nfrom collections import defaultdict\n\nfrom .exceptions import ValidationError\nfrom .plugin_manager import ValidationRuleSet\nfrom .types import ValidationResult, ConsistencyThresholds\n\n\n@dataclass\nclass ValidationContext:\n    \"\"\"Context passed between validators.\"\"\"\n    original: dict[str, Any]\n    rendered: str\n    rules: ValidationRuleSet\n    critical_values: list[str]\n    document_type: str = \"default\"\n    results: dict[str, Any] = field(default_factory=lambda: {\n        \"passed\": True,\n        \"issues\": [],\n        \"warnings\": [],\n        \"info\": [],\n        \"consistency_metrics\": {},\n        \"content_analysis\": {}\n    })\n\n\nclass BaseValidator(ABC):\n    \"\"\"Abstract base class for all validators.\"\"\"\n    \n    @abstractmethod\n    def validate(self, context: ValidationContext) -> ValidationContext:\n        \"\"\"\n        Perform validation and update context results.\n        \n        Args:\n            context: Validation context with data and rules\n            \n        Returns:\n            Updated validation context\n        \"\"\"\n        pass\n    \n    def add_issue(self, context: ValidationContext, message: str) -> None:\n        \"\"\"Add an issue and mark validation as failed.\"\"\"\n        context.results[\"issues\"].append(message)\n        context.results[\"passed\"] = False\n    \n    def add_warning(self, context: ValidationContext, message: str) -> None:\n        \"\"\"Add a warning without failing validation.\"\"\"\n        context.results[\"warnings\"].append(message)\n    \n    def add_info(self, context: ValidationContext, message: str) -> None:\n        \"\"\"Add informational message.\"\"\"\n        context.results[\"info\"].append(message)\n\n\nclass FieldValidator(BaseValidator):\n    \"\"\"Validates field-level requirements.\"\"\"\n    \n    def validate(self, context: ValidationContext) -> ValidationContext:\n        \"\"\"Validate required fields, lengths, and allowed values.\"\"\"\n        self._validate_required_fields(context)\n        self._validate_field_lengths(context)\n        self._validate_allowed_values(context)\n        return context\n    \n    def _validate_required_fields(self, context: ValidationContext) -> None:\n        \"\"\"Check that all required fields are present.\"\"\"\n        for field in context.rules.required_fields:\n            if field not in context.original or not context.original[field]:\n                self.add_issue(context, f\"Required field missing: {field}\")\n    \n    def _validate_field_lengths(self, context: ValidationContext) -> None:\n        \"\"\"Check field lengths against maximum limits.\"\"\"\n        for field, max_length in context.rules.max_lengths.items():\n            if field in context.original:\n                field_length = len(str(context.original[field]))\n                if field_length > max_length:\n                    self.add_warning(\n                        context,\n                        f\"Field {field} exceeds max length: {field_length} > {max_length}\"\n                    )\n    \n    def _validate_allowed_values(self, context: ValidationContext) -> None:\n        \"\"\"Check fields contain only allowed values.\"\"\"\n        # Ensure we're working with a dict\n        original = context.original\n        if not isinstance(original, dict):\n            if hasattr(original, '__dict__'):\n                original = vars(original)\n            else:\n                self.add_issue(context, f\"Cannot validate: original is {type(original)}, not dict\")\n                return\n        \n        for field, allowed in context.rules.allowed_values.items():\n            if field in original:\n                value = original[field]\n                if value not in allowed:\n                    self.add_issue(\n                        context,\n                        f\"Field {field} has invalid value: '{value}' not in {allowed}\"\n                    )\n\n\nclass ContentQualityValidator(BaseValidator):\n    \"\"\"Validates content quality and structure.\"\"\"\n    \n    # Default prohibited phrases that indicate LLM artifacts\n    PROHIBITED_PHRASES = [\n        \"I cannot\", \"I can't\", \"I'm unable\", \"As an AI\", \"As a language model\",\n        \"I don't have access\", \"I am not able\", \"My training data\",\n        \"I'm designed to\", \"Hello!\", \"Hi there!\", \"Greetings!\",\n        \"Is there anything else\", \"Feel free to ask\", \"How can I help\",\n        \"Let me know if\", \"I hope this helps\", \"Please note that\"\n    ]\n    \n    def __init__(self, prohibited_phrases: Optional[list[str]] = None):\n        \"\"\"Initialize with optional custom prohibited phrases.\"\"\"\n        self.prohibited_phrases = prohibited_phrases or self.PROHIBITED_PHRASES\n    \n    def validate(self, context: ValidationContext) -> ValidationContext:\n        \"\"\"Check content quality including prohibited phrases and sentence structure.\"\"\"\n        self._check_prohibited_phrases(context)\n        self._check_sentence_quality(context)\n        self._analyze_content_metrics(context)\n        return context\n    \n    def _check_prohibited_phrases(self, context: ValidationContext) -> None:\n        \"\"\"Check for prohibited phrases that indicate LLM artifacts.\"\"\"\n        found_phrases = []\n        rendered_lower = context.rendered.lower()\n        \n        for phrase in self.prohibited_phrases:\n            if phrase.lower() in rendered_lower:\n                found_phrases.append(phrase)\n        \n        if found_phrases:\n            self.add_issue(context, f\"Prohibited phrases found: {', '.join(found_phrases)}\")\n    \n    def _check_sentence_quality(self, context: ValidationContext) -> None:\n        \"\"\"Check sentence structure and quality.\"\"\"\n        sentences = re.split(r'[.!?]+', context.rendered)\n        sentences = [s.strip() for s in sentences if s.strip()]\n        \n        issues: Set[str] = set()\n        \n        for sentence in sentences:\n            # Check for sentences starting with lowercase\n            if sentence and not sentence[0].isupper() and not sentence[0].isdigit():\n                issues.add(\"Sentence starting with lowercase\")\n            \n            # Check for very short sentences (likely fragments)\n            word_count = len(sentence.split())\n            if word_count < 3:\n                issues.add(\"Very short sentence fragment\")\n            \n            # Check for very long sentences\n            if word_count > 50:\n                issues.add(\"Excessively long sentence\")\n        \n        # Add unique issues as warnings (limit to 3)\n        for issue in list(issues)[:3]:\n            self.add_warning(context, issue)\n        \n        context.results[\"content_analysis\"][\"sentence_count\"] = len(sentences)\n    \n    def _analyze_content_metrics(self, context: ValidationContext) -> None:\n        \"\"\"Analyze basic content metrics.\"\"\"\n        word_count = len(context.rendered.split())\n        char_count = len(context.rendered)\n        \n        context.results[\"content_analysis\"][\"word_count\"] = word_count\n        context.results[\"content_analysis\"][\"character_count\"] = char_count\n\n\nclass StructuralValidator(BaseValidator):\n    \"\"\"Validates document structure and formatting.\"\"\"\n    \n    def __init__(self, expected_sections: int = 9):\n        \"\"\"Initialize with expected number of sections.\"\"\"\n        self.expected_sections = expected_sections\n    \n    def validate(self, context: ValidationContext) -> ValidationContext:\n        \"\"\"Check structural consistency of the document.\"\"\"\n        self._check_section_structure(context)\n        self._check_paragraph_consistency(context)\n        return context\n    \n    def _check_section_structure(self, context: ValidationContext) -> None:\n        \"\"\"Check for consistent section markers.\"\"\"\n        sections = re.findall(r'^Section \\d+', context.rendered, re.MULTILINE)\n        \n        if sections:\n            unique_sections = len(set(sections))\n            if unique_sections != self.expected_sections:\n                self.add_warning(\n                    context,\n                    f\"Section count mismatch: found {unique_sections}, \"\n                    f\"expected {self.expected_sections}\"\n                )\n    \n    def _check_paragraph_consistency(self, context: ValidationContext) -> None:\n        \"\"\"Check paragraph structure consistency.\"\"\"\n        paragraphs = context.rendered.split('\\n\\n')\n        paragraph_lengths = [len(p.split()) for p in paragraphs if p.strip()]\n        \n        if paragraph_lengths:\n            avg_length = np.mean(paragraph_lengths)\n            std_length = np.std(paragraph_lengths)\n            cv = (std_length / avg_length * 100) if avg_length > 0 else 0\n            \n            context.results[\"content_analysis\"][\"paragraph_cv\"] = cv\n            if cv > 50:  # High variability\n                self.add_info(context, f\"High paragraph length variability: CV={cv:.1f}%\")\n\n\nclass CriticalValueValidator(BaseValidator):\n    \"\"\"Validates preservation of critical values.\"\"\"\n    \n    def validate(self, context: ValidationContext) -> ValidationContext:\n        \"\"\"Ensure critical values are preserved in the output.\"\"\"\n        preserved = 0\n        total = 0\n        \n        for critical_field in context.critical_values:\n            if critical_field in context.original:\n                total += 1\n                critical_value = str(context.original[critical_field])\n                if critical_value in context.rendered:\n                    preserved += 1\n                else:\n                    self.add_issue(\n                        context,\n                        f\"Critical value '{critical_value}' for field '{critical_field}' \"\n                        f\"not preserved\"\n                    )\n        \n        if total > 0:\n            preservation_rate = preserved / total\n            context.results[\"content_analysis\"][\"critical_value_preservation\"] = preservation_rate\n            \n            if preservation_rate < 1.0:\n                self.add_warning(\n                    context,\n                    f\"Critical value preservation rate: {preservation_rate:.1%}\"\n                )\n        \n        return context\n\n\n@dataclass\nclass ConsistencyMetrics:\n    \"\"\"Track consistency metrics across multiple runs.\"\"\"\n    word_counts: list[int] = field(default_factory=list)\n    sentence_counts: list[int] = field(default_factory=list)\n    content_hashes: list[str] = field(default_factory=list)\n    \n    def calculate_coefficient_of_variation(self) -> float:\n        \"\"\"Calculate coefficient of variation for word counts.\"\"\"\n        if len(self.word_counts) < 2:\n            return 0.0\n        mean_count = np.mean(self.word_counts)\n        if mean_count == 0:\n            return 0.0\n        std_count = np.std(self.word_counts)\n        return (std_count / mean_count) * 100\n    \n    def calculate_structural_consistency(self) -> float:\n        \"\"\"Calculate structural consistency based on content hashes.\"\"\"\n        if len(self.content_hashes) < 2:\n            return 1.0\n        unique_hashes = len(set(self.content_hashes))\n        return 1.0 - (unique_hashes - 1) / len(self.content_hashes)\n\n\nclass ConsistencyTracker:\n    \"\"\"Tracks consistency metrics across multiple validation runs.\"\"\"\n    \n    def __init__(self):\n        \"\"\"Initialize consistency tracker.\"\"\"\n        self.metrics_by_type = defaultdict(ConsistencyMetrics)\n    \n    def track(self, rendered: str, document_type: str) -> None:\n        \"\"\"Track metrics for consistency analysis.\"\"\"\n        metrics = self.metrics_by_type[document_type]\n        \n        # Track content hash\n        content_hash = hashlib.md5(rendered.encode()).hexdigest()[:8]\n        metrics.content_hashes.append(content_hash)\n        \n        # Track word count\n        word_count = len(rendered.split())\n        metrics.word_counts.append(word_count)\n        \n        # Track sentence count\n        sentence_count = len(re.split(r'[.!?]+', rendered))\n        metrics.sentence_counts.append(sentence_count)\n    \n    def get_metrics(self, document_type: str) -> dict[str, Any]:\n        \"\"\"Get consistency metrics for a document type.\"\"\"\n        metrics = self.metrics_by_type[document_type]\n        \n        if len(metrics.word_counts) < 2:\n            return {\n                \"runs_analyzed\": len(metrics.word_counts),\n                \"insufficient_data\": True\n            }\n        \n        cv = metrics.calculate_coefficient_of_variation()\n        structural = metrics.calculate_structural_consistency()\n        \n        return {\n            \"runs_analyzed\": len(metrics.word_counts),\n            \"coefficient_of_variation\": cv,\n            \"structural_consistency\": structural,\n            \"mean_word_count\": np.mean(metrics.word_counts),\n            \"std_word_count\": np.std(metrics.word_counts),\n            \"unique_outputs\": len(set(metrics.content_hashes)),\n            \"target_achieved\": cv < 15.0  # Target CV < 15%\n        }\n    \n    def get_report(self, document_type: Optional[str] = None) -> dict[str, Any]:\n        \"\"\"Generate comprehensive consistency report.\"\"\"\n        report = {\n            \"overall_metrics\": {},\n            \"by_document_type\": {}\n        }\n        \n        types = [document_type] if document_type else list(self.metrics_by_type.keys())\n        \n        for doc_type in types:\n            metrics = self.metrics_by_type[doc_type]\n            if len(metrics.word_counts) > 0:\n                report[\"by_document_type\"][doc_type] = {\n                    \"runs\": len(metrics.word_counts),\n                    \"cv\": metrics.calculate_coefficient_of_variation(),\n                    \"structural_consistency\": metrics.calculate_structural_consistency(),\n                    \"mean_word_count\": np.mean(metrics.word_counts),\n                    \"unique_outputs\": len(set(metrics.content_hashes))\n                }\n        \n        # Calculate overall metrics\n        all_cvs = [m[\"cv\"] for m in report[\"by_document_type\"].values()]\n        if all_cvs:\n            report[\"overall_metrics\"] = {\n                \"mean_cv\": np.mean(all_cvs),\n                \"meets_target\": all(cv < 15.0 for cv in all_cvs)\n            }\n        \n        return report\n\n\nclass ValidationOrchestrator:\n    \"\"\"\n    Orchestrates multiple validators in a pipeline.\n    \n    This replaces the monolithic EnhancedValidationOrchestrator with\n    a modular, extensible design.\n    \"\"\"\n    \n    def __init__(self, expected_sections: int = 9):\n        \"\"\"\n        Initialize validation orchestrator with default validators.\n        \n        Args:\n            expected_sections: Expected number of sections in document\n        \"\"\"\n        self.validators = [\n            FieldValidator(),\n            ContentQualityValidator(),\n            StructuralValidator(expected_sections),\n            CriticalValueValidator()\n        ]\n        self.consistency_tracker = ConsistencyTracker()\n    \n    def add_validator(self, validator: BaseValidator) -> None:\n        \"\"\"Add a custom validator to the pipeline.\"\"\"\n        self.validators.append(validator)\n    \n    def validate(self,\n                original: dict[str, Any],\n                rendered: str,\n                rules: ValidationRuleSet,\n                critical_values: list[str],\n                document_type: str = \"default\") -> dict[str, Any]:\n        \"\"\"\n        Run all validators in sequence.\n        \n        Args:\n            original: Original extracted values\n            rendered: Rendered document content\n            rules: Validation rules to apply\n            critical_values: Critical values that must be preserved\n            document_type: Type of document being validated\n            \n        Returns:\n            Comprehensive validation results\n        \"\"\"\n        # Create validation context\n        context = ValidationContext(\n            original=original,\n            rendered=rendered,\n            rules=rules,\n            critical_values=critical_values,\n            document_type=document_type\n        )\n        \n        # Run validators in sequence\n        for validator in self.validators:\n            context = validator.validate(context)\n        \n        # Track consistency metrics\n        self.consistency_tracker.track(rendered, document_type)\n        \n        # Add consistency metrics to results\n        context.results[\"consistency_metrics\"] = self.consistency_tracker.get_metrics(document_type)\n        \n        return context.results\n    \n    def get_consistency_report(self, document_type: Optional[str] = None) -> dict[str, Any]:\n        \"\"\"\n        Get consistency report across validation runs.\n        \n        Args:\n            document_type: Optional specific document type to report on\n            \n        Returns:\n            Comprehensive consistency report\n        \"\"\"\n        return self.consistency_tracker.get_report(document_type)\n\n\n# Backward compatibility alias\nEnhancedValidationOrchestrator = ValidationOrchestrator"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01GGjTey1GiJxmvdc6uMNNrQ",
+        "type": "tool_result",
+        "content": "File created successfully at: /mnt/d/Common_Resources/irb-ki-summary/app/core/validators.py"
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "Write operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I've created a new modular validators.py file that refactors the monolithic EnhancedValidationOrchestrator into smaller, focused components. Now I need to update the document_framework.py to use this new modular system instead of the old monolithic class.\n\nLet me update the imports and usage in document_framework.py.",
+        "signature": "EugDCkYIBxgCKkB0k2FtFQSj6UE39eYtOPcYgLunwk+gD6NXZhWkRzUCSm8R7L3in55z7m4+zKHqXkYchwMMQhWJhUTpiK+BYcqaEgyrNXasq4ewn7ZpQ7waDNzNVw9gz/gUa3fpoSIwgcqX/DqDgsLw8Ew3nfHeCOveQNZSLDDYyByKfqXdjWKrIoGrBnI0qYqE5OmJyRZOKs8CW5uKOOq0DIILYbBUNBq9ddm49B75K5QfW3nWIOJR0dN5/9d/OYZnqwaeZ99NrSDWi9cPAPy/lV86igwkRNxC9Lp/UfiUz/xmzxeuiYnK/oMC44bRksvd7e/ICljzPapgbHo4Ks12eY2I7LDY3YQW8g3uKE51OxEiRMv2i5hknquC9MyN5zqGcHjl5X15xZzyKYYJOYil+0ygrmqC1ei45jtR2tN4AWLwOdM0uGAejtEPSz8yhUmCapLTezOeLZ0NIdlzs5+7l8uOpPPMBzvKJ6BVGc2AnLRJFTJdkd2Pt5ANb/DcuwqZ7EAa4PdpJZfrwPjYiJE9MoRNoWuqJC++n+Ct4oPozfe5DfwHrQJiPVDPAHsfkjj/nF0kobLrBPfYDnpwAKe/blZlNXTizn7X350RtIq/JqWEZKQPVicPj34MJ/iWw47Ege4xvshysAIYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01B2gpwevdY3QoXTiZVMa8rY",
+        "name": "Edit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "old_string": "from .plugin_manager import PluginManager, ValidationRuleSet\nfrom .template_engine import Jinja2Engine\nfrom .rag_pipeline import StreamingRAGPipeline\nfrom .multi_agent_system import MultiAgentPool\nfrom .exceptions import (\n    DocumentFrameworkError,\n    PluginNotFoundError,\n    TemplateError,\n    ValidationError,\n    RAGPipelineError\n)",
+          "new_string": "from .plugin_manager import PluginManager, ValidationRuleSet\nfrom .template_engine import Jinja2Engine\nfrom .rag_pipeline import StreamingRAGPipeline\nfrom .multi_agent_system import MultiAgentPool\nfrom .validators import ValidationOrchestrator, EnhancedValidationOrchestrator\nfrom .exceptions import (\n    DocumentFrameworkError,\n    PluginNotFoundError,\n    TemplateError,\n    ValidationError,\n    RAGPipelineError\n)"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01B2gpwevdY3QoXTiZVMa8rY",
+        "type": "tool_result",
+        "content": "The file /mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py has been updated. Here's the result of running `cat -n` on a snippet of the edited file:\n    13→import sys\n    14→sys.path.append(str(Path(__file__).parent.parent))\n    15→from logger import get_logger\n    16→\n    17→from .plugin_manager import PluginManager, ValidationRuleSet\n    18→from .template_engine import Jinja2Engine\n    19→from .rag_pipeline import StreamingRAGPipeline\n    20→from .multi_agent_system import MultiAgentPool\n    21→from .validators import ValidationOrchestrator, EnhancedValidationOrchestrator\n    22→from .exceptions import (\n    23→    DocumentFrameworkError,\n    24→    PluginNotFoundError,\n    25→    TemplateError,\n    26→    ValidationError,\n    27→    RAGPipelineError\n    28→)\n    29→from .types import (\n    30→    ValidationResult, ValidationConstants, ProcessingConstants,\n    31→    DocumentMetadata, SectionContent, ErrorCodes, ProcessingError\n    32→)"
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "Edit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to remove the old EnhancedValidationOrchestrator class from document_framework.py since I've now created a modular replacement in validators.py. Let me check what needs to be removed.",
+        "signature": "EugCCkYIBxgCKkB5lHBPUn2QyzZdJE1YCIxLtoH0mWTNf+tTi7XPEG90uG+6WWzGwQ1H4xtzX76jOkKTVyFprMrFip3vNA7cfvL1EgxBzjsFWKDyrQtesAIaDMIvscTto7QdRDm16iIw7p1VjPnKsZlZJrrW7oGG081hS7QWaqcWQxapD0S47Xv1nZfo65kSlBxww/aXaCNjKs8B2TgkjMJLd5fWVIHSFNFt0yXevoUo8LcEq0TWRkTVLP9psH3rrHe2nDBUTBTSxogUS87op1Bfc5Fp/qwyNY/4Ne7yfrjkhCmrB3fd5XkbraGGkD+K4457JmVHUtqyAIPv+JIGPfd+Vh7NGIqBfKDLJ+nS9hCASLcKTd7zZpQaofSeJ4XlMTKgA3nyGu0EYxkvlSS2LE2+TwaxiwC46jlZ2jsVkacU+4Jb6C5y7a9A4OcEaPSRWW5aW95dzbmAw/8EUSekLFhXKtk6IUhJWMJYGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01V8ng5RDic6BwNDos7483N4",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "edits": [
+            {
+              "old_string": "@dataclass\nclass ConsistencyMetrics:\n    \"\"\"Track consistency metrics across multiple runs\"\"\"\n    word_counts: List[int] = field(default_factory=list)\n    sentence_counts: List[int] = field(default_factory=list)\n    content_hashes: List[str] = field(default_factory=list)\n    \n    def calculate_coefficient_of_variation(self) -> float:\n        \"\"\"Calculate CV for word counts\"\"\"\n        if len(self.word_counts) < 2:\n            return 0.0\n        mean_count = np.mean(self.word_counts)\n        if mean_count == 0:\n            return 0.0\n        std_count = np.std(self.word_counts)\n        return (std_count / mean_count) * 100\n    \n    def calculate_structural_consistency(self) -> float:\n        \"\"\"Calculate structural consistency based on content hashes\"\"\"\n        if len(self.content_hashes) < 2:\n            return 1.0\n        unique_hashes = len(set(self.content_hashes))\n        return 1.0 - (unique_hashes - 1) / len(self.content_hashes)",
+              "new_string": "# ConsistencyMetrics moved to validators.py"
+            },
+            {
+              "old_string": "class EnhancedValidationOrchestrator:",
+              "new_string": "# EnhancedValidationOrchestrator class has been refactored and moved to validators.py\n# The original monolithic class is preserved there for backward compatibility\n\nclass _LegacyValidationStub:"
+            },
+            {
+              "old_string": "        self.validation_orchestrator = ValidationOrchestrator()",
+              "new_string": "        # Use the new modular ValidationOrchestrator from validators.py\n        self.validation_orchestrator = ValidationOrchestrator()"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "content": "<tool_use_error>String to replace not found in file.\nString: @dataclass\nclass ConsistencyMetrics:\n    \"\"\"Track consistency metrics across multiple runs\"\"\"\n    word_counts: List[int] = field(default_factory=list)\n    sentence_counts: List[int] = field(default_factory=list)\n    content_hashes: List[str] = field(default_factory=list)\n    \n    def calculate_coefficient_of_variation(self) -> float:\n        \"\"\"Calculate CV for word counts\"\"\"\n        if len(self.word_counts) < 2:\n            return 0.0\n        mean_count = np.mean(self.word_counts)\n        if mean_count == 0:\n            return 0.0\n        std_count = np.std(self.word_counts)\n        return (std_count / mean_count) * 100\n    \n    def calculate_structural_consistency(self) -> float:\n        \"\"\"Calculate structural consistency based on content hashes\"\"\"\n        if len(self.content_hashes) < 2:\n            return 1.0\n        unique_hashes = len(set(self.content_hashes))\n        return 1.0 - (unique_hashes - 1) / len(self.content_hashes)</tool_use_error>",
+        "is_error": true,
+        "tool_use_id": "toolu_01V8ng5RDic6BwNDos7483N4"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me search for the exact text in the file to see how it's formatted.",
+        "signature": "EvABCkYIBxgCKkBXx1NCapm8wm6sqgFN7Lk3KS8h+mU9vtHW7WkGvzNHnUSrmmO2uE6bKsiyM17BLhTIYWte7PY67m1NNvSEkwV1EgysE1t5C0qdMNmPMZYaDJsnc0v530+8KrpYMCIwgl6NG/x5EUXS/YWI578pC5ffgb2nKAuME4sTSIVNRwyWZ9EUK8bfrk/iTpDoq4W0Klgi1eDiY1rw62V/O8WfSqR6XJw8Nwg354rwc5RpoUIdETKVe6CRI/GDfs6uNdjFbb44WV//81drpjNHTZ8X26InW9uGnFKbdqzusb/vaiK41D5oMZe1C6WoGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01JTjqZrMGZyU7v1YU4wApEo",
+        "name": "Grep",
+        "input": {
+          "pattern": "class ConsistencyMetrics",
+          "path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "output_mode": "content",
+          "-n": true,
+          "-A": 5
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01JTjqZrMGZyU7v1YU4wApEo",
+        "type": "tool_result",
+        "content": "50:class ConsistencyMetrics:\n51-    \"\"\"Metrics for tracking generation consistency\"\"\"\n52-    content_hashes: List[str] = field(default_factory=list)\n53-    word_counts: List[int] = field(default_factory=list) \n54-    sentence_counts: List[int] = field(default_factory=list)\n55-    critical_value_preservation_rate: float = 0.0"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me see the whole ConsistencyMetrics class.",
+        "signature": "EtcBCkYIBxgCKkA5ywcrX9Y2VncC4GBcWCwVOqge65WC4iBDM7B2LzTHfV2Fa+ruH2C3UAC0mcufXdy1TMfjjG86z8diQxI4XxCPEgx3fPSM5Kf/ooQDRDYaDDbYZrMI1nLjsB3QKCIw89wWEOmx5s1O/sbrcUCrqn//pJmQEphtXeU/aqNHspcZWCZKOI9HEKNVLb4+MIPMKj8GZCpUWVLwlqmrfkOli/4KLz3FyrO+A481Yv4Ou2kKrx+ricKiuDPVQGej2MfoZ35SuZqY0/xgTtp7xOgjOYYYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_019vrrm2bJF6Brt3r7Gu1fxV",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "offset": 49,
+          "limit": 40
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_019vrrm2bJF6Brt3r7Gu1fxV",
+        "type": "tool_result",
+        "content": "    49→@dataclass\n    50→class ConsistencyMetrics:\n    51→    \"\"\"Metrics for tracking generation consistency\"\"\"\n    52→    content_hashes: List[str] = field(default_factory=list)\n    53→    word_counts: List[int] = field(default_factory=list) \n    54→    sentence_counts: List[int] = field(default_factory=list)\n    55→    critical_value_preservation_rate: float = 0.0\n    56→    structural_consistency_score: float = 0.0\n    57→    coefficient_of_variation: float = 0.0\n    58→    \n    59→    def calculate_coefficient_of_variation(self) -> float:\n    60→        \"\"\"Calculate coefficient of variation for word counts.\n    61→        \n    62→        The CV is a measure of relative variability, calculated as the ratio\n    63→        of standard deviation to mean, expressed as a percentage.\n    64→        Lower CV values indicate more consistent document generation.\n    65→        Target: CV < 15% for good consistency.\n    66→        \"\"\"\n    67→        if len(self.word_counts) < 2:\n    68→            return 0.0\n    69→        \n    70→        # Calculate mean (average) word count across all generations\n    71→        mean = np.mean(self.word_counts)\n    72→        \n    73→        # Calculate standard deviation (measure of spread)\n    74→        std = np.std(self.word_counts)\n    75→        \n    76→        # CV = (standard deviation / mean) * 100\n    77→        # Returns percentage showing relative variability\n    78→        return (std / mean * 100) if mean > 0 else 0.0\n    79→    \n    80→    def calculate_structural_consistency(self) -> float:\n    81→        \"\"\"Calculate structural consistency based on content hashes\"\"\"\n    82→        if len(self.content_hashes) < 2:\n    83→            return 1.0\n    84→        unique_hashes = len(set(self.content_hashes))\n    85→        return 1.0 - (unique_hashes - 1) / len(self.content_hashes)\n    86→\n    87→\n    88→class EnhancedValidationOrchestrator:\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Let me check how much of the EnhancedValidationOrchestrator class exists so I can properly remove it.",
+        "signature": "Eo8CCkYIBxgCKkDjIXv1hU1hBV0xDb93EemFrB2VbDeWOWBjZGho5mKGxaNtBv680QOM9jlS2pUUy4YfKPU85FfwVFdxGIx+eK3JEgwUGKxI3cfnffRmpoUaDPkIF2CpkL27I1r8CyIwZqFp5jq6zNQFt/qANQUv9T+gZ5ilmOwO/+D6I65ewu+WTFjd12QEQwizxY0UXJGIKncWC+csdVMNSM0KDtkMaiyDPQ91OoojQX4NgPQU8/3eIuRmmDrNB0RfaBRJdB9cQEDFD9wFyrTNuWbNt5c3hdIatZXW1Ry7ZaxPcccI6cVRx5BXjESfX+OWhAk+WJ/te0UZJarptupPtbC0nqEcTei2mzrZEvfBwxgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_014nD1vCq6Zq3iqY4eA7bWFW",
+        "name": "Grep",
+        "input": {
+          "pattern": "class EnhancedValidationOrchestrator",
+          "path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "output_mode": "content",
+          "-n": true,
+          "-A": 5
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_014nD1vCq6Zq3iqY4eA7bWFW",
+        "type": "tool_result",
+        "content": "88:class EnhancedValidationOrchestrator:\n89-    \"\"\"Enhanced validation with strict consistency checking\"\"\"\n90-    \n91-    def __init__(self):\n92-        self.validators = {}\n93-        self.consistency_metrics = defaultdict(ConsistencyMetrics)"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now let me find where the EnhancedValidationOrchestrator class ends so I can remove it completely.",
+        "signature": "Eo0CCkYIBxgCKkBOF/c46g79sjjydevA/3aqJyVrz+g5i3ErtxwuJ30y9TkrQHgEn7+HpQVC797jCzV6YnpeoMW9vUIA/TGiiDPWEgwTFpAyQ7UNs6OFXI8aDN5/jLvSIol3K4cOoiIwKLTbPULRQ0jguiwsMjYB/UGlptTd6XF+nEgNUOQ9gIUs/CSvh6lO+pRHtKGRJfe0KnWLSSVaXtHnE0/N54rML4wbcjKvknmCM1C+bYHva+h7jTZNd6YX2b4ed+/xgBlbLhfp6K2bSdDdBk2G1P9gd5gN6jTzUyuqW0l6mRxnlCWGH2wpZzTGKDZAXXonuxbkxvAyVlYH9eqb0/DXmTI9Nk1Cy7EaEiQYAQ=="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_015weQtbqjYw4HGS4gdHZr4P",
+        "name": "Grep",
+        "input": {
+          "pattern": "^class |^def |^# Global|^# Backward",
+          "path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "output_mode": "content",
+          "-n": true,
+          "head_limit": 50
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_015weQtbqjYw4HGS4gdHZr4P",
+        "type": "tool_result",
+        "content": "40:class GenerationResult:\n50:class ConsistencyMetrics:\n88:class EnhancedValidationOrchestrator:\n392:class DocumentGenerationFramework:"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "So the EnhancedValidationOrchestrator class ends at line 391 (before class DocumentGenerationFramework at line 392). Let me remove the entire old implementation and use the new modular one.",
+        "signature": "EukCCkYIBxgCKkCspCyQPVPoRUr6Zu5UOiFzVwcrpNg1WHPL5SPeZ4f6QmsiWWBeDItf4+72rSYU9Ezy06bv/6XxaT+EhR+f3w9PEgwajk5A9Wi+njmmkrgaDA+kG/jXCbDCOIwRySIwJjDRf94il6oGaAp7JsUBbqf/+9QRe77Q7Yn8aVtmH/akJvJ6AMcPVdfOpU/3p3n3KtABaJynf7g/KvfPrA4Uz5vJg0iDi0fH4y2wy1aDNmRLN7RkGWl5JiNz1SXoTC99+NNMYKbrI3tVYtMZLHv9P7qaEUUEO29CQc+7uGVYOS4cgRBJaLLTh032Xkv5+bU6aMbOxiSruwSV8jwEx8UZUYA2OpEO8SWFVbkxNs9dF/pViqOJGfdjmy8+LLSqToRhCtLYQuHtbQnYWEG/01mXfXFCXOwRNeip1OvWPr+TCv8V6963KM83h7w5fFcQ9GpyPYBKGunHVswqhiBD9BPJPbg/DBgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01BvnntdWmBTUsd79ASMLhng",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "offset": 380,
+          "limit": 15
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01BvnntdWmBTUsd79ASMLhng",
+        "type": "tool_result",
+        "content": "   380→                \"mean_cv\": np.mean(all_cvs),\n   381→                \"meets_target\": np.mean(all_cvs) < 15.0,\n   382→                \"document_types_analyzed\": len(types)\n   383→            }\n   384→        \n   385→        return report\n   386→\n   387→\n   388→# For backward compatibility\n   389→ValidationOrchestrator = EnhancedValidationOrchestrator\n   390→\n   391→\n   392→class DocumentGenerationFramework:\n   393→    \"\"\"\n   394→    Main framework for document generation with plugin architecture\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Now I have a clear picture. I need to remove the old ConsistencyMetrics and EnhancedValidationOrchestrator classes (lines 49-390) and keep just the import from validators.py. Let me do that.",
+        "signature": "EusCCkYIBxgCKkAlghFR8QPDw2wDP7UdJma3THx2W1BPrJCB3vQZinncdBhDcgE0HotLlGuX67AGI4CLtMse+YV1lUK3qiXSp3fCEgyo+aMeq4Furx9J9bUaDFVu2aWpiOogYeVMByIwAOtoIGh5ZqBv7mK/XQUTQm4ynW+yrw/C3jBZiPhN/aNyCkxlnlFmj6fmyBYOod76KtIBZfc0ZiwMVFhJphjpHMp9p2i0G5XAgd/MdhTaRu9bAEGo0swIMetE9aacR3+Tp+RFyxGV1H+o+qASwr65QV01zB5rc0MTYRlrkhR0nr8D67lq3vYjs9NC3Mv2H7H5x8U5d8v1k45NTyXqRrzXylRzf/zGTOSu5bFWYWqIebvCAFE4hSSifq6Wh1rqGfYZJDCN1R+CXg+3hVxVFcoHffMIXh7X2IcCP4wBM9ZmF9x4xDhOCy02RlYKpW3cM6SI2UsoywwTHNcT6KsclZ3cvv7XiKMoGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Q9UuCxTkDChXKnesWuMcjc",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "edits": [
+            {
+              "old_string": "@dataclass\nclass ConsistencyMetrics:\n    \"\"\"Metrics for tracking generation consistency\"\"\"\n    content_hashes: List[str] = field(default_factory=list)\n    word_counts: List[int] = field(default_factory=list) \n    sentence_counts: List[int] = field(default_factory=list)\n    critical_value_preservation_rate: float = 0.0\n    structural_consistency_score: float = 0.0\n    coefficient_of_variation: float = 0.0\n    \n    def calculate_coefficient_of_variation(self) -> float:\n        \"\"\"Calculate coefficient of variation for word counts.\n        \n        The CV is a measure of relative variability, calculated as the ratio\n        of standard deviation to mean, expressed as a percentage.\n        Lower CV values indicate more consistent document generation.\n        Target: CV < 15% for good consistency.\n        \"\"\"\n        if len(self.word_counts) < 2:\n            return 0.0\n        \n        # Calculate mean (average) word count across all generations\n        mean = np.mean(self.word_counts)\n        \n        # Calculate standard deviation (measure of spread)\n        std = np.std(self.word_counts)\n        \n        # CV = (standard deviation / mean) * 100\n        # Returns percentage showing relative variability\n        return (std / mean * 100) if mean > 0 else 0.0\n    \n    def calculate_structural_consistency(self) -> float:\n        \"\"\"Calculate structural consistency based on content hashes\"\"\"\n        if len(self.content_hashes) < 2:\n            return 1.0\n        unique_hashes = len(set(self.content_hashes))\n        return 1.0 - (unique_hashes - 1) / len(self.content_hashes)",
+              "new_string": "# ConsistencyMetrics has been moved to validators.py as part of the refactoring\n# Import it from there for backward compatibility\nfrom .validators import ConsistencyMetrics"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01Q9UuCxTkDChXKnesWuMcjc",
+        "type": "tool_result",
+        "content": "Applied 1 edit to /mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py:\n1. Replaced \"@dataclass\nclass ConsistencyMetrics:\n    \"\"\"Metric...\" with \"# ConsistencyMetrics has been moved to validators....\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to clean up the document_framework.py file now. The EnhancedValidationOrchestrator class is still there and needs to be replaced with a stub that imports from validators.py. Let me remove the old class and point to the new modular implementation.",
+        "signature": "EqcDCkYIBxgCKkBzUlfMxUR/SI41vb63e56nMdy4MXlgQmmIGbpjalWGTdx9DT6tpTvLljcYNXUTU19HBmTtV8synH+y1VMtgel9EgxMTQ9bj2oDcBVfZfgaDKBBCeUq62UFTVv6qSIwAtidPPc38/EMi1DfPvloq8L6Ps/c121W8xkPLyP/wk9HzyzdTC8hi/nq/MJW/db1Ko4CPz81EwnB4QfIa2bE8YTI2N/aiz35JCktR7kD4xTPVfUI4WcfOQjCXAdQDSOqPCrZFKkhGxH5DQBz4EXdBbcCPgibmBhbwAfFQ1PTo6YdE05a97mvE3c9Xfidg+Uf4l2udfXO7tVf0smfBgWgF5ge11GnmBkYTpjV6ECveL9JDv7Gkpd+IvjS7sbjklwyVo6EPC/PqwB4XT1/+DoC4E1+YoUsm8tKIkUJz9qDh6ITrmMZOHPxUqYy/zbRt/LOign6PdZGIQRLlfg2kkTCO3xQIr3fgX6BgRLpQf+2vFVWoP1vwmyPDXvakTuJtV83YU2afLK269d5EWgcRDXiNSXMCK/OawtZKO9Eq1qw+5IUGAE="
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01CLBvCsfaw39f8iPkTkqA3P",
+        "name": "MultiEdit",
+        "input": {
+          "file_path": "/mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py",
+          "edits": [
+            {
+              "old_string": "class EnhancedValidationOrchestrator:\n    \"\"\"Enhanced validation with strict consistency checking\"\"\"\n    \n    def __init__(self):\n        self.validators = {}\n        self.consistency_metrics = defaultdict(ConsistencyMetrics)\n        # Use constants from types module for better maintainability\n        self.prohibited_phrases = ValidationConstants.PROHIBITED_PHRASES",
+              "new_string": "# EnhancedValidationOrchestrator has been refactored into smaller, focused validators\n# The class is now imported from validators.py where it has been redesigned\n# with modular components (FieldValidator, ContentQualityValidator, etc.)\n# The original monolithic class is preserved there as ValidationOrchestrator\n# with an alias for backward compatibility\n\nclass _LegacyValidationOrchestrator:\n    \"\"\"Legacy stub - actual implementation in validators.py\"\"\"\n    def __init__(self):\n        # This is a stub class to prevent import errors\n        # The actual implementation is imported below\n        pass"
+            },
+            {
+              "old_string": "# For backward compatibility\nValidationOrchestrator = EnhancedValidationOrchestrator",
+              "new_string": "# Import the refactored validation classes for backward compatibility\n# EnhancedValidationOrchestrator is now an alias in validators.py\nfrom .validators import EnhancedValidationOrchestrator, ValidationOrchestrator"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01CLBvCsfaw39f8iPkTkqA3P",
+        "type": "tool_result",
+        "content": "Applied 2 edits to /mnt/d/Common_Resources/irb-ki-summary/app/core/document_framework.py:\n1. Replaced \"class EnhancedValidationOrchestrator:\n    \"\"\"Enhan...\" with \"# EnhancedValidationOrchestrator has been refactor...\"\n2. Replaced \"# For backward compatibility\nValidationOrchestrato...\" with \"# Import the refactored validation classes for bac...\""
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "MultiEdit operation feedback:\n- [$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py]: [DAIC Reminder] When you're done implementing, run: daic\n"
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "I need to remove the rest of the EnhancedValidationOrchestrator class from document_framework.py since I've moved it to validators.py. Let me check what's left of the class.",
+        "signature": "EtcCCkYIBxgCKkDyLsaE8Di55/VfVtRJTx1tNFiybQscGE21mngt1+Bz4uAJV6USl5cqI5hbNbmwy1NlY9KfWCxS8gXrRVvzjLy2EgwsdcnrJ+BDU6wFsm0aDEGBOtwo7uOn7Ko19CIwwlpkRNDxB4nnvJ6t2ytFopotOnRzUF0QQqev1c0qTJh7eHApJZ+wFXnUE/xWT2KiKr4B1GxXRr+YpGaypYGdse14l6dcYCpnG0h0ZHwLFnpEfO3D0FvtUcHs+IwDz2MxwabIn0143/tMpJZA6lcEhLvzFsWwJL048tTat3YUuSyuKjkVIlaokug3UuCPwS7A7lmWvlwPemuPzRxH6Oag38iGEYPxa0wyQg9wpXSb6SZRBoOaoQUa3H5/FEjul1TVwV/Y9Cb/8H4P8j2FjQ+oDlT+zRUyGmCa8uh32x/59NiYKns9I2HdAA1JSXWsD8MEPxgB"
+      }
+    ]
+  }
+]
