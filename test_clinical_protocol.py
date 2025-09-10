@@ -270,7 +270,8 @@ async def test_workflow_consistency(pdf_path: Path, config: Dict[str, str], num_
             workflow_completions.append(completion_rate)
             
             # Track in orchestrator
-            orchestrator._track_consistency_metrics(content, "clinical-protocol")
+            # Consistency metrics are tracked automatically during validation
+            orchestrator.consistency_tracker.track(content, "clinical-protocol")
         else:
             logger.warning(f"Run {i+1} failed: {result.get('error_message', 'Unknown error')}")
     

@@ -356,15 +356,3 @@ class StreamingRAGPipeline:
         
         return context
     
-    def update_chunk(self, chunk_id: str, new_text: str):
-        """
-        Update a chunk in real-time (for streaming updates)
-        """
-        # Update completed
-        
-        # Mark index for rebuild
-        # In production, would use incremental index updates
-        if self.vector_store_index:
-            # Simple approach: rebuild affected parts of index
-            # Advanced: Use incremental vector updates
-            pass

@@ -1,15 +1,11 @@
 """
 Agent interfaces and protocols for the multi-agent system.
-
-This module defines clear interfaces for agents using Protocol classes,
-improving separation of concerns and making the system more extensible.
 """
 
 from typing import Protocol, Dict, Any, List, Optional, runtime_checkable
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-import asyncio
 from datetime import datetime
 
 
@@ -27,7 +23,7 @@ class AgentRole(Enum):
 @dataclass
 class AgentMessage:
     """
-    Standardized message format for inter-agent communication.
+    Message format for inter-agent communication.
     
     Attributes:
         sender: Name/ID of the sending agent
@@ -105,10 +101,6 @@ class IExtractionAgent(Protocol):
     async def extract(self, text: str, patterns: dict[str, str]) -> dict[str, Any]:
         """Extract information using provided patterns."""
         ...
-    
-    async def extract_structured(self, text: str, schema: dict[str, Any]) -> dict[str, Any]:
-        """Extract information according to a structured schema."""
-        ...
 
 
 @runtime_checkable
@@ -117,10 +109,6 @@ class IGenerationAgent(Protocol):
     
     async def generate(self, template: str, context: dict[str, Any]) -> str:
         """Generate content using a template and context."""
-        ...
-    
-    async def generate_section(self, section_type: str, data: dict[str, Any]) -> str:
-        """Generate a specific section type."""
         ...
 
 
@@ -131,10 +119,6 @@ class IValidationAgent(Protocol):
     async def validate_rules(self, content: Any, rules: dict[str, Any]) -> dict[str, Any]:
         """Validate content against a set of rules."""
         ...
-    
-    async def validate_intent(self, original: str, transformed: str) -> bool:
-        """Validate that intent is preserved between original and transformed."""
-        ...
 
 
 @runtime_checkable
@@ -143,10 +127,6 @@ class IOrchestrationAgent(Protocol):
     
     async def orchestrate(self, agents: list[IAgent], context: AgentContext) -> dict[str, Any]:
         """Orchestrate a pipeline of agents."""
-        ...
-    
-    def plan_execution(self, agents: list[IAgent], requirements: dict[str, Any]) -> list[str]:
-        """Plan the execution order of agents."""
         ...
 
 

@@ -193,7 +193,8 @@ async def test_consistency(pdf_path: Path, num_runs: int = 3) -> Dict[str, Any]:
             word_counts.append(word_count)
 
             # Track in orchestrator
-            orchestrator._track_consistency_metrics(content, "informed-consent")
+            # Consistency metrics are tracked automatically during validation
+            orchestrator.consistency_tracker.track(content, "informed-consent")
         else:
             logger.warning(f"Run {i+1} failed")
 
@@ -276,7 +277,7 @@ async def main():
             display_summary(sections, result["validation_results"])
 
             # Save output
-            output_file = "ki_summary_enhanced_output.json"
+            output_file = "ki_summary_output.json"
             with open(output_file, 'w') as f:
                 json.dump({
                     "sections": sections,

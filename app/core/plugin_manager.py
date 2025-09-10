@@ -91,10 +91,6 @@ class DocumentPlugin(ABC):
         """Check if this plugin supports the given document type"""
         pass
     
-    @abstractmethod
-    def get_sub_template_rules(self) -> Dict[str, Any]:
-        """Return rules for sub-template selection"""
-        pass
     
     @abstractmethod
     def get_critical_values(self) -> List[str]:
