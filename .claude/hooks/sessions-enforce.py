@@ -50,7 +50,7 @@ def load_config():
         try:
             with open(CONFIG_FILE, 'r') as f:
                 return json.load(f)
-        except (json.JSONDecodeError, OSError, IOError):
+        except:
             pass
     return DEFAULT_CONFIG
 

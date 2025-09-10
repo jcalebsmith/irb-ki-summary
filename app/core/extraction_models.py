@@ -2,9 +2,10 @@
 Pydantic models for structured extraction
 Defines strongly-typed models for extracting information from documents
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Literal
 from enum import Enum
+import re
 
 
 class StudyType(str, Enum):
@@ -107,10 +108,29 @@ class KIExtractionSchema(BaseModel):
     
     # Section 8 - Duration
     study_duration: str = Field(
-        default="the study period",
+        default="",
         max_length=50,
-        description="How long participants will be in study (e.g., '6 months', 'up to 2 years'). 10 words max."
+        description="Step 1: Search for duration statements near keywords: 'duration', 'last', 'participate for', 'involvement', 'study period', 'treatment period', 'follow-up'. Step 2: Extract the EXACT time phrase (e.g., '6 months', 'up to 2 years', '12 weeks'). Step 3: Return empty string if not found. NEVER use placeholders."
     )
+    
+    @field_validator('study_duration')
+    @classmethod
+    def validate_duration(cls, v: str) -> str:
+        """Validate study duration is a real duration, not a placeholder"""
+        if not v:
+            return v
+        
+        # Use existing text processing utilities
+        from app.core.utils import TextProcessingUtils
+        cleaned = TextProcessingUtils.clean_whitespace(v).lower()
+        
+        # Simplified placeholder check
+        placeholders = {'not specified', 'unknown', 'varies', 'the study period', 'tbd', 'n/a'}
+        if cleaned in placeholders:
+            return ""
+        
+        # Simplified pattern check
+        return v if re.search(r'\d+\s*\w+', cleaned) else ""
     
     # Section 9 - Alternatives
     affects_treatment: bool = Field(

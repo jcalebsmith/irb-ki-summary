@@ -5,6 +5,8 @@ Test utilities for the document generation framework.
 import os
 import json
 import hashlib
+import logging
+import sys
 from pathlib import Path
 from typing import Tuple, Any, Optional
 from dotenv import load_dotenv
@@ -14,45 +16,60 @@ env_path = Path(__file__).parent.parent / 'app' / '.env'
 load_dotenv(env_path)
 
 
+def setup_test_logging(name: str = __name__) -> logging.Logger:
+    """
+    Set up consistent logging for tests.
+    
+    Args:
+        name: Logger name (defaults to module name)
+    
+    Returns:
+        Configured logger instance
+    """
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    return logging.getLogger(name)
+
+
+def setup_test_paths():
+    """
+    Set up Python path for test imports.
+    
+    Returns:
+        Tuple of (ROOT_DIR, APP_DIR) paths
+    """
+    ROOT_DIR = Path(__file__).parent.parent
+    APP_DIR = ROOT_DIR / "app"
+    
+    # Add to sys.path if not already present
+    if str(APP_DIR) not in sys.path:
+        sys.path.append(str(APP_DIR))
+    if str(ROOT_DIR) not in sys.path:
+        sys.path.append(str(ROOT_DIR))
+    
+    return ROOT_DIR, APP_DIR
+
+
 def setup_azure_openai() -> Tuple[Any, Any]:
     """
     Set up Azure OpenAI embedding model and LLM for testing.
     
     Returns:
-        Tuple of (embed_model, llm)
+        Tuple of (embed_model, llm) - embed_model is None for now, llm is GenericLLMExtractor
     """
-    from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
-    from llama_index.llms.azure_openai import AzureOpenAI as AzureOpenAILLM
+    print("DEBUG: setup_azure_openai() - Starting", flush=True)
     
-    organization = os.getenv("ORGANIZATION", "231173")
-    api_key = os.getenv("AZURE_OPENAI_API_KEY")
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    api_version = os.getenv("API_VERSION", "2024-10-21")
+    from app.core.llm_integration import GenericLLMExtractor
+    print("DEBUG: setup_azure_openai() - GenericLLMExtractor imported", flush=True)
     
-    # Initialize embedding model
-    embed_model = AzureOpenAIEmbedding(
-        model="text-embedding-3-small",
-        deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_EMBEDDING", "text-embedding-3-small"),
-        api_key=api_key,
-        azure_endpoint=azure_endpoint,
-        api_version=api_version,
-        default_headers={"OpenAI-Organization": organization, "Shortcode": organization}
-    )
+    # Initialize LLM extractor which now uses direct OpenAI SDK
+    print("DEBUG: setup_azure_openai() - About to create GenericLLMExtractor instance", flush=True)
+    llm = GenericLLMExtractor()
+    print(f"DEBUG: setup_azure_openai() - GenericLLMExtractor created: {llm}", flush=True)
     
-    # Initialize LLM
-    llm = AzureOpenAILLM(
-        model="gpt-4o",
-        engine="gpt-4o",
-        deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_LLM", "gpt-4o"),
-        api_key=api_key,
-        azure_endpoint=azure_endpoint,
-        api_version=api_version,
-        default_headers={"OpenAI-Organization": organization, "Shortcode": organization},
-        temperature=0,
-        top_p=0.0,
-        organization=organization
-    )
+    # Embedding model not needed anymore since RAG pipeline was removed
+    embed_model = None
     
+    print("DEBUG: setup_azure_openai() - Returning", flush=True)
     return embed_model, llm
 
 

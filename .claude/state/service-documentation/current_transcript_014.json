@@ -1,0 +1,163 @@
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01C5MnSDPxky8t58AgRFqjvE",
+        "type": "tool_result",
+        "content": "import { knowledgeGraphAgent, buildKnowledgeGraph, KnowledgeGraph } from '../agents/knowledgeGraphAgent';\r\nimport { neo4jStorage } from '../storage/neo4jStorage';\r\nimport { StreamingKnowledgeGraphAgent } from '../agents/streamingKnowledgeGraphAgent';\r\nimport { referenceManager } from '../storage/referenceManager';\nimport { Models } from '../config';\nimport { qualityMetrics } from '../storage/qualityMetrics';\r\n\r\n// Event types for streaming\r\nexport enum ResearchEventType {\r\n--\n      }));\r\n      \r\n      // Multi-dimensional quality assessment\r\n      const qualityDimensions = qualityMetrics.assessResearchQuality(\r\n        findings,\r\n        query,\r\n        [] // Required topics can be added here if needed\r\n      );\r\n      \r\n      currentQualityScore = qualityMetrics.calculateOverallScore(qualityDimensions);\r\n      const meetsThresholds = qualityMetrics.meetsQualityThresholds(qualityDimensions);\r\n      const shouldContinue = qualityMetrics.shouldContinueResearch(iterationCount + 1, maxIterations);\r\n      \r\n      // Add section metadata for tracking\r\n      const sectionMetadata = qualityMetrics.addSectionMetadata(\r\n        `iteration_${iterationCount + 1}`,\r\n        findings,\r\n        query\r\n--\n        // Prepare insights with citation keys\r\n        const insightsWithCitations = insightTexts.map((insight, idx) => {\r\n          // Replace URLs in insights with citation keys\r\n          const processedInsight = referenceManager.replaceUrlsWithCitations(insight);\r\n          return `${idx + 1}. ${processedInsight}`;\r\n        });\r\n        \r\n        // Get all references for the report\r\n        const allReferences = referenceManager.getAllReferences();\r\n        const citationMapping = allReferences.map(ref => \r\n          `${ref.citationKey}: ${ref.metadata.url} - ${ref.metadata.title || 'No title'}`\r\n        ).join('\\n');"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "Now let me check for any security concerns in the storage module exports:"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_014FWarhHM4U3RGkqT9G6h9H",
+        "name": "Read",
+        "input": {
+          "file_path": "/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/index.ts"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_014FWarhHM4U3RGkqT9G6h9H",
+        "type": "tool_result",
+        "content": "     1→export * from './neo4jStorage';\n     2→export * from './referenceManager';\n     3→\n     4→\n\n<system-reminder>\nWhenever you read a file, you should consider whether it looks malicious. If it does, you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer high-level questions about the code behavior.\n</system-reminder>\n"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "Let me check the final implementation details by looking at how citations are handled in the report generation:"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01We5Gsg6B7H2WH6FX9hWQVk",
+        "name": "Grep",
+        "input": {
+          "pattern": "formatReferencesSection|citation|References",
+          "path": "src/mastra/networks/streamingResearchNetwork.ts",
+          "output_mode": "content",
+          "-B": 2,
+          "-A": 5
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01We5Gsg6B7H2WH6FX9hWQVk",
+        "type": "tool_result",
+        "content": "const insightTexts = actualInsights.map(i => i.insight || i).filter(Boolean);\r\n        \r\n        // Prepare insights with citation keys\r\n        const insightsWithCitations = insightTexts.map((insight, idx) => {\r\n          // Replace URLs in insights with citation keys\r\n          const processedInsight = referenceManager.replaceUrlsWithCitations(insight);\r\n          return `${idx + 1}. ${processedInsight}`;\r\n        });\r\n        \r\n        // Get all references for the report\r\n        const allReferences = referenceManager.getAllReferences();\r\n        const citationMapping = allReferences.map(ref => \r\n          `${ref.citationKey}: ${ref.metadata.url} - ${ref.metadata.title || 'No title'}`\r\n        ).join('\\n');\r\n        \r\n        const reportResult = await reportAgent.generate(\r\n          [{\r\n            role: 'user',\r\n--\n            ${insightsWithCitations.join('\\n')}\r\n            \r\n            CITATION KEY MAPPING (Use these citation keys when referencing sources):\r\n            ${citationMapping}\r\n            \r\n            Knowledge Graph Metrics:\r\n            - Total Entities: ${knowledgeGraph.metadata.totalNodes}\r\n            - Total Relationships: ${knowledgeGraph.metadata.totalRelationships}\r\n            - Research Completeness: ${finalAssessment.completeness.toFixed(1)}%\r\n--\n            - Analysis Depth: ${finalAssessment.depth.toFixed(1)}%\r\n            - Overall Quality Score: ${finalAssessment.overallQuality.toFixed(1)}%\r\n            - Total Sources Referenced: ${allReferences.length}\r\n            \r\n            ${knowledgeGraph.contradictions.length > 0 ? `Contradictions Found: ${knowledgeGraph.contradictions.length}` : 'No contradictions detected'}\r\n            ${knowledgeGraph.gaps.length > 0 ? `Knowledge Gaps Identified: ${knowledgeGraph.gaps.map(g => g.area).join(', ')}` : ''}\r\n            \r\n            Instructions:\r\n            1. Synthesize ONLY the provided insights above\r\n            2. Use inline citations [1], [2], etc. when referencing information\r\n            3. DO NOT add information not present in the insights\r\n            4. Structure the report with clear sections\r\n            5. Highlight key findings and their implications\r\n            6. Maintain factual accuracy based on the collected data\r\n            7. Include a References section at the end of the report`\r\n          }],\r\n          { maxSteps: 3 }\r\n        );\r\n        \r\n        if (reportResult.text) {"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "Let me also check if there are any obvious quality assessment integrations:"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01RKrdA16LbGdNmFon6aNQyY",
+        "name": "Bash",
+        "input": {
+          "command": "git diff HEAD~2..HEAD src/mastra/networks/streamingResearchNetwork.ts | head -50",
+          "description": "Check recent changes to streaming network"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01RKrdA16LbGdNmFon6aNQyY",
+        "type": "tool_result",
+        "content": "diff --git a/src/mastra/networks/streamingResearchNetwork.ts b/src/mastra/networks/streamingResearchNetwork.ts\nindex e413366..f91c6ba 100644\n--- a/src/mastra/networks/streamingResearchNetwork.ts\n+++ b/src/mastra/networks/streamingResearchNetwork.ts\n@@ -5,11 +5,14 @@ import { researchCoordinatorAgent } from '../agents/researchCoordinatorAgent';\n import { qualityAssessmentAgent } from '../agents/qualityAssessmentAgent';\n import { refinementAgent } from '../agents/refinementAgent';\n import { researchAgent } from '../agents/researchAgent';\n-import { streamingResearchAgent, processStreamingResearch } from '../agents/streamingResearchAgent';\n+import { streamingResearchAgent, extractInsightsFromText } from '../agents/streamingResearchAgent';\n import { reportAgent } from '../agents/reportAgent';\n+import { evaluationAgent } from '../agents/evaluationAgent';\n+import { learningExtractionAgent } from '../agents/learningExtractionAgent';\n+import { webSummarizationAgent } from '../agents/webSummarizationAgent';\n import { knowledgeGraphAgent, buildKnowledgeGraph, KnowledgeGraph } from '../agents/knowledgeGraphAgent';\n import { neo4jStorage } from '../storage/neo4jStorage';\n-import { SemanticInsightSynthesizer } from '../agents/semanticInsightSynthesizer';\n+import { StreamingKnowledgeGraphAgent } from '../agents/streamingKnowledgeGraphAgent';\n \n // Event types for streaming\n export enum ResearchEventType {\n@@ -20,7 +23,10 @@ export enum ResearchEventType {\n   QUALITY_ASSESSED = 'quality_assessed',\n   ITERATION_COMPLETE = 'iteration_complete',\n   RESEARCH_COMPLETE = 'research_complete',\n-  ERROR_OCCURRED = 'error_occurred'\n+  ERROR_OCCURRED = 'error_occurred',\n+  EVALUATION_PERFORMED = 'evaluation_performed',\n+  LEARNING_EXTRACTED = 'learning_extracted',\n+  WEB_SUMMARIZED = 'web_summarized'\n }\n \n export interface ResearchEvent {\n@@ -58,6 +64,9 @@ export const streamingResearchNetwork = new AgentNetwork({\n     researchAgent,\n     qualityAssessmentAgent,\n     refinementAgent,\n+    evaluationAgent,\n+    learningExtractionAgent,\n+    webSummarizationAgent,\n     reportAgent,\n     knowledgeGraphAgent,\n   ],\n@@ -65,6 +74,17 @@ export const streamingResearchNetwork = new AgentNetwork({\n   instructions: `\n     You are a streaming research coordination system that provides real-time updates as research progresses.\n     \n+    Your available agents are:\n+    1. Research Coordinator Agent: Creates research plans and determines quality criteria\n+    2. Research Agent: Conducts the actual research using web search and synthesis",
+        "is_error": false
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "Now let me generate the comprehensive code review:\n\n# Code Review: Research Report Depth and Quality Enhancement\n\n## Summary\n\nThe implementation successfully adds comprehensive citation management and quality assessment systems to the Mastra research framework. The code correctly implements centralized reference tracking with global citation numbering and multi-dimensional quality metrics. The integration follows established Mastra patterns and appears functionally sound. However, there are several security and reliability concerns that should be addressed.\n\n## 🔴 Critical Issues (2)\n\n### 1. Potential Code Injection in URL Hash Generation\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:374-383`\n**Issue**: Simple hash function vulnerable to hash collisions and potential manipulation\n**Impact**: Could lead to reference confusion or collision attacks\n**Recommendation**: Use crypto-safe hash function like SHA-256 instead of simple character code multiplication\n\n```typescript\n// Current vulnerable implementation:\nprivate generateId(url: string): string {\n  let hash = 0;\n  for (let i = 0; i < url.length; i++) {\n    const char = url.charCodeAt(i);\n    hash = ((hash << 5) - hash) + char;\n    hash = hash & hash; // Convert to 32bit integer\n  }\n  return `ref_${Math.abs(hash).toString(16)}`;\n}\n\n// Recommended secure implementation:\nimport { createHash } from 'crypto';\nprivate generateId(url: string): string {\n  return `ref_${createHash('sha256').update(url).digest('hex').substring(0, 16)}`;\n}\n```\n\n### 2. Unvalidated JSON Import in ReferenceManager\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:344-370`\n**Issue**: Direct JSON.parse without validation could allow code injection or DoS\n**Impact**: Malicious JSON could crash application or execute arbitrary code\n**Recommendation**: Add JSON schema validation before parsing\n\n## 🟡 Warnings (4)\n\n### 1. Missing URL Validation in Reference Management\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:58-120`\n**Issue**: URLs not validated before storage, could store malicious or invalid URLs\n**Impact**: Potential XSS or redirect attacks when URLs are displayed\n**Existing Pattern**: Web search tool validates URLs from Exa API\n**Recommendation**: Add URL validation using a library like `valid-url` or URL constructor validation\n\n### 2. Memory Leak Risk in Citation Contexts\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:125-150`\n**Issue**: Citation contexts accumulate without cleanup mechanism\n**Impact**: Memory usage could grow unbounded in long-running processes\n**Note**: The clear() method exists but no automatic cleanup based on TTL\n\n### 3. Potential Division by Zero in Quality Metrics\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/qualityMetrics.ts:395-402`\n**Issue**: calculateAverageCitations() could divide by zero if references.size is 0\n**Impact**: Application crash or NaN values in quality assessment\n**Existing Pattern**: Other calculation methods check for zero length first\n\n### 4. Missing Error Handling in Reference URL Replacement\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:263-279`\n**Issue**: URL regex replacement could fail on malformed URLs\n**Impact**: Could break report formatting or miss citations\n**Note**: Function continues processing even if some URLs fail to replace\n\n## 🟢 Notes (3)\n\n### 1. Excellent Integration with Existing Mastra Patterns\n**File**: Multiple files\n**Note**: The implementation correctly follows Mastra conventions with singleton exports, proper agent integration, and consistent error handling patterns\n**Not a Problem**: Maintains consistency with existing codebase architecture\n\n### 2. Comprehensive Quality Assessment Framework\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/qualityMetrics.ts`\n**Note**: Well-designed multi-dimensional quality evaluation system with configurable thresholds\n**Strength**: Provides actionable improvement recommendations and iteration control\n\n### 3. Smart Citation Key Integration\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/networks/streamingResearchNetwork.ts:640-665`\n**Note**: Intelligent URL replacement with citation keys in the final report generation maintains source traceability\n**Strength**: Solves the original problem of missing citations effectively\n\n## Additional Observations\n\n**Performance Considerations:**\n- Reference Manager uses efficient Map-based lookups for URL deduplication\n- Quality metrics calculations are reasonable for typical research workloads\n- No obvious N+1 query patterns or performance bottlenecks\n\n**Security Posture:**\n- Most security concerns are related to input validation rather than fundamental architectural flaws\n- The singleton pattern provides good encapsulation but requires proper lifecycle management\n\n**Code Quality:**\n- TypeScript interfaces are well-defined with appropriate typing\n- Error handling follows established patterns from the existing codebase\n- Documentation and comments are comprehensive and helpful\n\n## Recommendations for Production Deployment\n\n1. **High Priority**: Implement secure hash generation and JSON validation\n2. **Medium Priority**: Add URL validation and memory management for citation contexts\n3. **Low Priority**: Add more robust error handling for edge cases in URL replacement\n\nThe implementation successfully addresses the original requirements for enhanced citation management and quality assessment while maintaining compatibility with the existing Mastra framework."
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "tool_use_id": "toolu_01NS2NXof57qcL8B9cHQ7wHp",
+        "type": "tool_result",
+        "content": [
+          {
+            "type": "text",
+            "text": "Now let me generate the comprehensive code review:\n\n# Code Review: Research Report Depth and Quality Enhancement\n\n## Summary\n\nThe implementation successfully adds comprehensive citation management and quality assessment systems to the Mastra research framework. The code correctly implements centralized reference tracking with global citation numbering and multi-dimensional quality metrics. The integration follows established Mastra patterns and appears functionally sound. However, there are several security and reliability concerns that should be addressed.\n\n## 🔴 Critical Issues (2)\n\n### 1. Potential Code Injection in URL Hash Generation\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:374-383`\n**Issue**: Simple hash function vulnerable to hash collisions and potential manipulation\n**Impact**: Could lead to reference confusion or collision attacks\n**Recommendation**: Use crypto-safe hash function like SHA-256 instead of simple character code multiplication\n\n```typescript\n// Current vulnerable implementation:\nprivate generateId(url: string): string {\n  let hash = 0;\n  for (let i = 0; i < url.length; i++) {\n    const char = url.charCodeAt(i);\n    hash = ((hash << 5) - hash) + char;\n    hash = hash & hash; // Convert to 32bit integer\n  }\n  return `ref_${Math.abs(hash).toString(16)}`;\n}\n\n// Recommended secure implementation:\nimport { createHash } from 'crypto';\nprivate generateId(url: string): string {\n  return `ref_${createHash('sha256').update(url).digest('hex').substring(0, 16)}`;\n}\n```\n\n### 2. Unvalidated JSON Import in ReferenceManager\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:344-370`\n**Issue**: Direct JSON.parse without validation could allow code injection or DoS\n**Impact**: Malicious JSON could crash application or execute arbitrary code\n**Recommendation**: Add JSON schema validation before parsing\n\n## 🟡 Warnings (4)\n\n### 1. Missing URL Validation in Reference Management\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:58-120`\n**Issue**: URLs not validated before storage, could store malicious or invalid URLs\n**Impact**: Potential XSS or redirect attacks when URLs are displayed\n**Existing Pattern**: Web search tool validates URLs from Exa API\n**Recommendation**: Add URL validation using a library like `valid-url` or URL constructor validation\n\n### 2. Memory Leak Risk in Citation Contexts\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:125-150`\n**Issue**: Citation contexts accumulate without cleanup mechanism\n**Impact**: Memory usage could grow unbounded in long-running processes\n**Note**: The clear() method exists but no automatic cleanup based on TTL\n\n### 3. Potential Division by Zero in Quality Metrics\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/qualityMetrics.ts:395-402`\n**Issue**: calculateAverageCitations() could divide by zero if references.size is 0\n**Impact**: Application crash or NaN values in quality assessment\n**Existing Pattern**: Other calculation methods check for zero length first\n\n### 4. Missing Error Handling in Reference URL Replacement\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/referenceManager.ts:263-279`\n**Issue**: URL regex replacement could fail on malformed URLs\n**Impact**: Could break report formatting or miss citations\n**Note**: Function continues processing even if some URLs fail to replace\n\n## 🟢 Notes (3)\n\n### 1. Excellent Integration with Existing Mastra Patterns\n**File**: Multiple files\n**Note**: The implementation correctly follows Mastra conventions with singleton exports, proper agent integration, and consistent error handling patterns\n**Not a Problem**: Maintains consistency with existing codebase architecture\n\n### 2. Comprehensive Quality Assessment Framework\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/storage/qualityMetrics.ts`\n**Note**: Well-designed multi-dimensional quality evaluation system with configurable thresholds\n**Strength**: Provides actionable improvement recommendations and iteration control\n\n### 3. Smart Citation Key Integration\n**File**: `/mnt/c/Users/caleb/Desktop/GithubProjects/deepfield/src/mastra/networks/streamingResearchNetwork.ts:640-665`\n**Note**: Intelligent URL replacement with citation keys in the final report generation maintains source traceability\n**Strength**: Solves the original problem of missing citations effectively\n\n## Additional Observations\n\n**Performance Considerations:**\n- Reference Manager uses efficient Map-based lookups for URL deduplication\n- Quality metrics calculations are reasonable for typical research workloads\n- No obvious N+1 query patterns or performance bottlenecks\n\n**Security Posture:**\n- Most security concerns are related to input validation rather than fundamental architectural flaws\n- The singleton pattern provides good encapsulation but requires proper lifecycle management\n\n**Code Quality:**\n- TypeScript interfaces are well-defined with appropriate typing\n- Error handling follows established patterns from the existing codebase\n- Documentation and comments are comprehensive and helpful\n\n## Recommendations for Production Deployment\n\n1. **High Priority**: Implement secure hash generation and JSON validation\n2. **Medium Priority**: Add URL validation and memory management for citation contexts\n3. **Low Priority**: Add more robust error handling for edge cases in URL replacement\n\nThe implementation successfully addresses the original requirements for enhanced citation management and quality assessment while maintaining compatibility with the existing Mastra framework."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "Good code review completed. Now I need to run the service-documentation agent to update CLAUDE.md files, then the logging agent.",
+        "signature": "EqoCCkYIBxgCKkDLWEjDQEI8QAw9gk7q8Nn2TvaQ9V6ApRYXw8F3nzuRQ7a78serWSP2oMV5fvXVuaczyrO9YiViUemY6K1swSZcEgzvRvjHDJaWNHwJT58aDGsP1eEM6FtOtL8jiCIwvjOUh5chUfqu81XU9xAHR+7OlYqeXUCFkr3Jx+z8RDS3dI4lWxrukwWKMJ8LA8eUKpEBbFNUoOTc8fzn3o/iQrrze3cETd1ic1eE3z2RkhiZxb1ImyCorE0z24vi9zApFvTLiquGjqY0x2qd38nC3V/cBUVzMSqoX/ZG6flsl3jWX2s4WmBpQ7/fhm2G5Y68dIWfDNNCsbJr4gugQm4oHCzP4MfnUVtU9A7NOFjG31HLX9LycocCGPgKpDzip/i9vNdwMxgB"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01TQVD6qn7cJV8SgebCWsKTi",
+        "name": "Task",
+        "input": {
+          "subagent_type": "service-documentation",
+          "description": "Update storage CLAUDE.md",
+          "prompt": "Please update the CLAUDE.md documentation for the storage module to reflect the new reference management and quality metrics systems.\n\nNew files added to /src/mastra/storage/:\n1. referenceManager.ts - Centralized reference tracking and citation management\n2. qualityMetrics.ts - Multi-dimensional quality assessment framework\n\nThese integrate with the existing neo4jStorage.ts for the research pipeline.\n\nKey capabilities:\n- Global citation numbering ([1], [2], etc.)\n- URL deduplication and rich metadata tracking\n- Citation context storage with confidence scores\n- Multi-dimensional quality assessment (completeness, accuracy, relevance, source quality, depth, coherence)\n- Quality thresholds for iteration control\n- Section-level metadata tracking\n- Export/import for persistence\n\nUpdate the /src/mastra/storage/CLAUDE.md file to document these new components."
+        }
+      }
+    ]
+  }
+]

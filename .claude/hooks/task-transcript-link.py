@@ -7,9 +7,6 @@ import json
 import sys
 import os
 
-# Add app directory to path to import config
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'app'))
-
 # Load input from stdin
 try:
     input_data = json.load(sys.stdin)
@@ -60,15 +57,11 @@ for entry in transcript:
 
 # Route the transcript
 subagent_type = 'shared'
-if clean_transcript:
-    task_call = clean_transcript[-1]
-    for block in task_call.get('content'):
-        if block.get('type') == 'tool_use' and block.get('name') == 'Task':
-            task_input = block.get('input')
-            subagent_type = task_input.get('subagent_type')
-else:
-    # No transcript to process, exit gracefully
-    sys.exit(0)
+task_call = clean_transcript[-1]
+for block in task_call.get('content'):
+    if block.get('type') == 'tool_use' and block.get('name') == 'Task':
+        task_input = block.get('input')
+        subagent_type = task_input.get('subagent_type')
 
 # Get project root using shared_state
 from shared_state import get_project_root
@@ -93,12 +86,7 @@ def n_tokens(s: str) -> int:
     return len(enc.encode(s))
 
 # Save the transcript in chunks
-try:
-    from config import TEXT_PROCESSING
-    MAX_TOKENS_PER_BATCH = TEXT_PROCESSING["max_tokens_per_batch"]
-except ImportError:
-    # Fallback to default if config not available
-    MAX_TOKENS_PER_BATCH = 18_000
+MAX_TOKENS_PER_BATCH = 18_000
 transcript_batch, batch_tokens, file_index = [], 0, 1             
 
 while clean_transcript:

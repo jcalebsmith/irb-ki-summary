@@ -20,6 +20,13 @@ You are part of a sessions-based task management system. A new task has just bee
 - Identify ALL components, modules, and configs that will be involved
 - Include ANYTHING tangentially relevant - better to over-include
 
+### Step 1.5: Check Knowledge Graph (NEW - ALWAYS DO THIS FIRST)
+- Check if `.claude/state/knowledge-graph/graph.json` exists
+- If it does, extract keywords from the task description
+- Query the graph for related files using grep on the graph.json
+- Use discovered files as starting points for deeper research
+- This gives you instant context from previous sessions!
+
 ### Step 2: Research Everything (SPARE NO TOKENS)
 Hunt down:
 - Every component/module that will be touched

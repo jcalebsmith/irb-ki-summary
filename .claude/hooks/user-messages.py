@@ -8,7 +8,7 @@ try:
     import tiktoken
 except ImportError:
     tiktoken = None
-from shared_state import check_daic_mode_bool, set_daic_mode, query_memory_semantic
+from shared_state import check_daic_mode_bool, set_daic_mode
 
 # Load input
 input_data = json.load(sys.stdin)
@@ -28,7 +28,7 @@ try:
             config = json.load(f)
     else:
         config = {}
-except (ImportError, json.JSONDecodeError, OSError, AttributeError):
+except:
     config = {}
 
 # Default trigger phrases if not configured
@@ -179,52 +179,6 @@ Tasks are:
 
 If they want to create a task, follow the task creation protocol.
 """
-
-# Memory context retrieval
-try:
-    # Query memory for context relevant to the user's prompt
-    memory_results = []
-    
-    # Simple keyword extraction (could be enhanced with NLP)
-    keywords = []
-    important_terms = ["error", "bug", "test", "pytest", "npm", "git", "config", "setup", "deploy"]
-    for term in important_terms:
-        if term in prompt_lower:
-            keywords.append(term)
-    
-    # Also extract file paths mentioned
-    import re
-    file_pattern = r'[./\w-]+\.[a-zA-Z]{2,4}'
-    mentioned_files = re.findall(file_pattern, prompt)
-    
-    # Query memory for each keyword and file
-    for keyword in keywords[:3]:  # Limit to top 3 keywords
-        results = query_memory_semantic(keyword)
-        memory_results.extend(results[:2])  # Top 2 results per keyword
-    
-    for file_path in mentioned_files[:2]:  # Limit to top 2 files
-        results = query_memory_semantic(file_path)
-        memory_results.extend(results[:1])  # Top 1 result per file
-    
-    # Add memory context if we found relevant results
-    if memory_results:
-        memory_context = "\n[Memory Context]\n"
-        seen = set()
-        for result in memory_results[:5]:  # Limit total to 5 results
-            # Deduplicate
-            key = result.get('observation', result.get('learning', ''))
-            if key and key not in seen:
-                seen.add(key)
-                if result.get('type') == 'episode':
-                    memory_context += f"• Previous task '{result['task']}': {result['learning']}\n"
-                else:
-                    memory_context += f"• {result.get('entity', 'Knowledge')}: {key}\n"
-        
-        if len(seen) > 0:
-            context = memory_context + "\n" + context
-except Exception:
-    # Silently fail to not disrupt workflow
-    pass
 
 # Output the context additions
 if context:

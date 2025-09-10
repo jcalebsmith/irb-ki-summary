@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 # Import logging config
-from config import LOGGING_CONFIG
+from app.config import LOGGING_CONFIG
 
 def setup_logger(
     name: str = "irb_ki_summary",

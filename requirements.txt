@@ -3,7 +3,5 @@ pydantic>=2.7.0,<3.0.0
 python-multipart
 pypdf
 
-llama-index
-llama-index-llms-azure-openai
-llama-index-embeddings-azure-openai
+openai
 python-dotenv

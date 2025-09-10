@@ -8,7 +8,7 @@ import io
 
 from .pdf import read_pdf
 from .core.document_framework import DocumentGenerationFramework
-from llama_index.core.schema import Document
+from .core.document_models import Document
 
 
 def generate_summary(file_path: Any) -> Dict[str, str]:

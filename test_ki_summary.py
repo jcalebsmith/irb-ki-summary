@@ -4,6 +4,8 @@ Test script for Key Information Summary generation using new plugin-based archit
 """
 
 import sys
+print("DEBUG: Starting test_ki_summary.py", flush=True)
+
 import json
 import asyncio
 import logging
@@ -11,31 +13,45 @@ from pathlib import Path
 from typing import Dict, Any
 import time
 
-# Set up logging for test output
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger(__name__)
+print("DEBUG: Basic imports complete", flush=True)
 
-# Add app directory and repo root to path
-ROOT_DIR = Path(__file__).parent
-APP_DIR = ROOT_DIR / "app"
-sys.path.append(str(APP_DIR))
-sys.path.append(str(ROOT_DIR))
+# Set up logging for test output
+# Set up logging and paths using utilities
+from tests.test_utils import setup_test_logging, setup_test_paths
+
+print("DEBUG: Test utils imported", flush=True)
+
+logger = setup_test_logging(__name__)
+ROOT_DIR, APP_DIR = setup_test_paths()
+
+print("DEBUG: Logger and paths set up", flush=True)
 
 # Import configuration and test utilities
-from config import TEST_CONFIG, get_test_pdf_path
+from app.config import TEST_CONFIG, get_test_pdf_path
 from tests.test_utils import (
     setup_azure_openai,
     calculate_content_hash,
     save_test_results,
 )
 
+print("DEBUG: Config and test utilities imported", flush=True)
+
 from core.document_framework import DocumentGenerationFramework, EnhancedValidationOrchestrator
+print("DEBUG: Document framework imported", flush=True)
+
 from plugins.informed_consent_plugin import InformedConsentPlugin
+print("DEBUG: Plugin imported", flush=True)
+
 from pdf import read_pdf
-from llama_index.core.schema import Document
+print("DEBUG: PDF reader imported", flush=True)
+
+from app.core.document_models import Document
+print("DEBUG: Document models imported", flush=True)
 
 # Set up Azure OpenAI models
+print("DEBUG: About to set up Azure OpenAI...", flush=True)
 embed_model, llm = setup_azure_openai()
+print(f"DEBUG: Azure OpenAI setup complete. embed_model={embed_model}, llm={llm}", flush=True)
 
 
 def display_summary(final_responses: Dict[str, str], validation_results: Dict[str, Any] = None):
@@ -111,25 +127,34 @@ async def test_with_plugin(pdf_path: Path) -> Dict[str, Any]:
     Returns:
         Dictionary containing the generated summary and metrics
     """
+    print("DEBUG: test_with_plugin() - Starting", flush=True)
+    
     # Initialize the framework with Azure OpenAI models
+    print("DEBUG: test_with_plugin() - Creating DocumentGenerationFramework", flush=True)
     framework = DocumentGenerationFramework(
         plugin_dir="app/plugins",
         template_dir="app/templates",
         embed_model=embed_model,
         llm=llm,
     )
+    print("DEBUG: test_with_plugin() - Framework created", flush=True)
 
     # Register the enhanced plugin (pass class, not instance)
+    print("DEBUG: test_with_plugin() - Registering plugin", flush=True)
     framework.plugin_manager.register_plugin(
         "informed-consent-ki",
         InformedConsentPlugin,
     )
+    print("DEBUG: test_with_plugin() - Plugin registered", flush=True)
 
     # Read PDF and create document
+    print(f"DEBUG: test_with_plugin() - Reading PDF from {pdf_path}", flush=True)
     pdf_data = read_pdf(pdf_path)
+    print(f"DEBUG: test_with_plugin() - PDF read, got {len(pdf_data.texts)} text chunks", flush=True)
 
     # Create a Document object for LlamaIndex
     full_text = "\n".join(pdf_data.texts)
+    print(f"DEBUG: test_with_plugin() - Combined text length: {len(full_text)} chars", flush=True)
     document = Document(text=full_text, metadata={"source": str(pdf_path)})
 
     # Prepare parameters for generation
@@ -141,11 +166,13 @@ async def test_with_plugin(pdf_path: Path) -> Dict[str, Any]:
 
     # Generate summary using the plugin
     logger.info("Generating summary using enhanced plugin architecture...")
+    print("DEBUG: test_with_plugin() - About to call framework.generate()", flush=True)
     result = await framework.generate(
         document_type="informed-consent",
         parameters=parameters,
         document=document,
     )
+    print(f"DEBUG: test_with_plugin() - framework.generate() returned", flush=True)
 
     return {
         "success": result.success,
@@ -238,7 +265,9 @@ async def test_consistency(pdf_path: Path, num_runs: int = 3) -> Dict[str, Any]:
 
 async def main():
     """Main test function"""
+    print("DEBUG: main() - Starting", flush=True)
     pdf_path = get_test_pdf_path()
+    print(f"DEBUG: main() - Got PDF path: {pdf_path}", flush=True)
 
     if not pdf_path.exists():
         logger.error(f"PDF file not found at {pdf_path}")
@@ -253,7 +282,9 @@ async def main():
         logger.info("\n### TEST 1: Single Generation with Validation ###")
         start_time = time.time()
 
+        print("DEBUG: main() - About to call test_with_plugin()", flush=True)
         result = await test_with_plugin(pdf_path)
+        print(f"DEBUG: main() - test_with_plugin() returned: {result.get('success') if result else 'None'}", flush=True)
 
         elapsed_time = time.time() - start_time
         logger.info(f"Generation completed in {elapsed_time:.2f} seconds")

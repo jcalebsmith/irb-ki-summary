@@ -11,6 +11,9 @@ from app.core.plugin_manager import DocumentPlugin, TemplateCatalog, ValidationR
 from app.core.llm_integration import get_generic_extractor
 from app.core.multi_agent_system import BaseAgent, AgentRole, AgentContext
 from app.core.exceptions import ExtractionError
+from app.core.extraction_models import KIExtractionSchema
+from app.config import TEXT_PROCESSING
+# LLM validation is now integrated in extract_structured_with_validation
 from logger import get_logger
 
 # Set up module logger
@@ -188,42 +191,141 @@ class KIExtractionAgent(BaseAgent):
         # Get document context from parameters
         parameters = agent_context.parameters
         
-        # Extract document text from various possible sources
-        document_context = ""
-        if 'document' in parameters:
-            doc = parameters['document']
-            document_context = doc.text if hasattr(doc, 'text') else str(doc)
-        elif 'document_context' in parameters:
-            document_context = parameters['document_context']
-        elif 'document_text' in parameters:
-            document_context = parameters['document_text']
-        elif 'content' in parameters:
-            document_context = parameters['content']
+        # Extract document text using utility
+        from app.core.utils import DocumentUtils
+        document_context = DocumentUtils.extract_document_context(parameters)
         
-        # Build KI-specific extraction prompt
+        # Build KI-specific extraction prompt with chain-of-thought and one-shot examples
         system_prompt = (
             "You are an expert at extracting key information from Informed Consent documents "
-            "for IRB Key Information summaries. Extract all requested information accurately, "
-            "preserving clinical terminology exactly as written. Return well-formed, natural language "
-            "phrases that fit into sentences without duplication.\n\n"
-            "Formatting requirements:\n"
-            "- study_purpose: a concise clause WITHOUT a leading 'to' and without trailing punctuation.\n"
-            "  (It will be embedded after 'The purpose is to ...')\n"
-            "- study_goals: a concise clause WITHOUT a leading 'to' and without trailing punctuation.\n"
-            "  (It will be embedded after 'This study will ...')\n"
-            "- study_duration: the exact concise phrase from the document (e.g., '6 months', 'up to 2 years').\n"
-            "  Do NOT return placeholders like 'not specified' or 'unknown'; return an empty string if truly absent.\n"
-            "- biospecimen_details: a short phrase suitable to follow a sentence; begin with a capital letter; "
-            "  avoid trailing punctuation.\n"
+            "for IRB Key Information summaries using a step-by-step approach.\n\n"
+            
+            "EXTRACTION PROCESS:\n"
+            "1. First, read the entire document carefully\n"
+            "2. For each field, think about where this information typically appears\n"
+            "3. Search for specific keywords and patterns\n"
+            "4. Extract the EXACT phrase from the document\n"
+            "5. Validate the extraction meets the requirements\n\n"
+            
+            "ONE-SHOT EXAMPLE:\n"
+            "Document excerpt: 'Your participation in this study will last approximately 12 months, "
+            "with monthly visits to the clinic.'\n"
+            "Extraction thought process:\n"
+            "  - Found 'will last' which indicates duration\n"
+            "  - The duration phrase is 'approximately 12 months'\n"
+            "  - Simplifying to core duration: '12 months'\n"
+            "Result: study_duration = '12 months'\n\n"
+            
+            "FIELD-SPECIFIC INSTRUCTIONS:\n\n"
+            
+            "For study_duration (CRITICAL FIELD):\n"
+            "  Step 1: Search for these patterns in order:\n"
+            "    - 'will last [duration]'\n"
+            "    - 'duration of [duration]'\n"
+            "    - 'participate for [duration]'\n"
+            "    - 'involvement will be [duration]'\n"
+            "    - 'study period is [duration]'\n"
+            "    - 'total of [number] visits over [duration]'\n"
+            "    - 'follow-up period of [duration]'\n"
+            "    - 'treatment period of [duration]'\n"
+            "    - 'approximately [duration]'\n"
+            "    - 'up to [duration]'\n"
+            "  Step 2: Extract the core duration (number + unit)\n"
+            "  Step 3: Return ONLY the duration, not the surrounding text\n"
+            "  Examples of CORRECT extractions:\n"
+            "    - '6 months'\n"
+            "    - 'up to 2 years'\n"
+            "    - '12 weeks'\n"
+            "    - '24 monthly visits'\n"
+            "  Examples of INCORRECT extractions:\n"
+            "    - 'the study period' (placeholder)\n"
+            "    - 'varies' (not specific)\n"
+            "    - 'not specified' (placeholder)\n"
+            "    - '' (correct if truly not found)\n\n"
+            
+            "For study_purpose:\n"
+            "  - Extract the main objective WITHOUT 'to' prefix\n"
+            "  - Will follow 'The purpose is to...'\n\n"
+            
+            "For study_goals:\n"
+            "  - Extract what the study will accomplish WITHOUT 'to' prefix\n"
+            "  - Will follow 'This study will...'\n\n"
+            
+            "VALIDATION RULES:\n"
+            "- NEVER invent information not in the document\n"
+            "- Return empty string if information is truly absent\n"
+            "- Extract EXACT phrases, preserve clinical terminology\n"
         )
         
-        # Extract using generic JSON extraction
-        logger.info("Extracting KI-specific fields from document...")
-        extracted = await self.extractor.extract_json(
-            document_context=document_context,
-            extraction_schema=KI_EXTRACTION_SCHEMA,
-            system_prompt=system_prompt
-        )
+        # Try structured extraction with validation first
+        logger.info("Extracting KI-specific fields with semantic validation...")
+        try:
+            # Use structured extraction with Pydantic model and validation
+            extraction, validation = await self.extractor.extract_structured_with_validation(
+                document_context=document_context[:TEXT_PROCESSING["extraction_context_limits"]["first_pass"]],
+                output_cls=KIExtractionSchema,
+                validate=True,
+                max_attempts=3
+            )
+            
+            # Log validation results
+            if validation:
+                logger.info(f"Extraction confidence: {validation.overall_confidence:.2%}")
+                if validation.requires_human_review:
+                    logger.warning("Extraction requires human review due to low confidence")
+                if validation.cross_field_issues:
+                    logger.warning(f"Cross-field issues: {validation.cross_field_issues}")
+            
+            # Convert Pydantic model to dict
+            extracted = extraction.model_dump()
+            
+            # Store validation metadata in context for downstream use
+            agent_context.metadata["validation_result"] = validation.to_dict() if validation else None
+            
+        except Exception as e:
+            logger.warning(f"Structured extraction with validation failed: {e}")
+            logger.info("Falling back to JSON extraction...")
+            
+            # Fallback to JSON extraction
+            extracted = await self.extractor.extract_json(
+                document_context=document_context[:TEXT_PROCESSING["extraction_context_limits"]["first_pass"]],
+                extraction_schema=KI_EXTRACTION_SCHEMA,
+                system_prompt=system_prompt
+            )
+        
+        # Multi-step extraction: If critical fields are missing, try focused extraction
+        if not extracted.get("study_duration"):
+            logger.info("Study duration not found in first pass - attempting focused extraction")
+            
+            # Create a focused prompt specifically for duration
+            duration_prompt = (
+                "You are tasked with finding ONLY the study duration from this document.\n\n"
+                "CHAIN OF THOUGHT PROCESS:\n"
+                "1. First, scan for time-related sections (schedule, timeline, duration, visits)\n"
+                "2. Look for specific phrases:\n"
+                "   - 'The study will last...'\n"
+                "   - 'Your participation will be...'\n"
+                "   - 'You will be in the study for...'\n"
+                "   - 'Total duration...'\n"
+                "   - 'Follow-up period...'\n"
+                "   - 'Treatment period...'\n"
+                "   - Any mention of weeks, months, or years in context of participation\n"
+                "3. Extract the EXACT duration phrase\n\n"
+                "Return a JSON object with a single field 'study_duration' containing the exact duration "
+                "(e.g., '6 months', '12 weeks', 'up to 2 years') or empty string if not found.\n\n"
+                "IMPORTANT: Do not invent or guess. Only extract what is explicitly stated."
+            )
+            
+            # Try focused extraction on full document
+            duration_result = await self.extractor.extract_json(
+                document_context=document_context[:TEXT_PROCESSING["extraction_context_limits"]["second_pass"]],  # Even larger context for second pass
+                extraction_schema={"study_duration": KI_EXTRACTION_SCHEMA["study_duration"]},
+                system_prompt=duration_prompt
+            )
+            
+            if duration_result.get("study_duration"):
+                logger.info(f"Found duration in second pass: {duration_result['study_duration']}")
+                extracted["study_duration"] = duration_result["study_duration"]
         
         # Check if extraction failed
         if "error" in extracted:
@@ -249,26 +351,23 @@ class KIExtractionAgent(BaseAgent):
         # Section 1: Use extracted pediatric flag
         slot_values["is_pediatric"] = extracted.get("is_pediatric", False)
         
-        # Section 4: Direct mappings - convert Enums to strings
-        study_type = extracted.get("study_type", "studying")
-        slot_values["study_type"] = study_type.value if hasattr(study_type, 'value') else str(study_type)
+        from app.core.utils import DocumentUtils
         
-        article = extracted.get("article", "a ")
-        slot_values["article"] = article.value if hasattr(article, 'value') else str(article)
-        
+        # Section 4: Direct mappings - use enum extraction utility
+        slot_values["study_type"] = DocumentUtils.extract_enum_value(extracted, "study_type", "studying")
+        slot_values["article"] = DocumentUtils.extract_enum_value(extracted, "article", "a ")
         slot_values["study_object"] = extracted.get("study_object", "intervention")
-        
-        population = extracted.get("population", "people")
-        slot_values["population"] = population.value if hasattr(population, 'value') else str(population)
+        slot_values["population"] = DocumentUtils.extract_enum_value(extracted, "population", "people")
         
         slot_values["study_purpose"] = extracted.get("study_purpose", "evaluate effectiveness")
         slot_values["study_goals"] = extracted.get("study_goals", "gather data")
         
-        # Biospecimen statement
-        if extracted.get("collects_biospecimens") and extracted.get("biospecimen_details"):
-            slot_values["biospecimen_statement"] = extracted["biospecimen_details"]
-        else:
-            slot_values["biospecimen_statement"] = ""
+        # Simplified biospecimen statement
+        slot_values["biospecimen_statement"] = (
+            extracted.get("biospecimen_details", "") 
+            if extracted.get("collects_biospecimens") 
+            else ""
+        )
         
         # Section 5: Randomization text
         if extracted.get("has_randomization"):
@@ -303,8 +402,21 @@ class KIExtractionAgent(BaseAgent):
                 benefit_detail=benefit_detail
             )
         
-        # Section 8: Duration (rely on LLM extraction; no regex fallback)
-        slot_values["study_duration"] = extracted.get("study_duration", "")
+        # Section 8: Duration - validate extraction quality
+        duration = extracted.get("study_duration", "")
+        
+        # Log extraction result for debugging
+        if duration:
+            logger.info(f"Extracted study_duration: '{duration}'")
+        else:
+            logger.warning("No study_duration extracted - may need multi-pass extraction")
+        
+        # Check for placeholder values that shouldn't be used
+        if duration and duration.lower() in ["the study period", "not specified", "unknown", "varies", "tbd"]:
+            logger.warning(f"Detected placeholder duration value: {duration} - clearing")
+            duration = ""
+        
+        slot_values["study_duration"] = duration
         
         # Section 9: Alternatives
         if extracted.get("affects_treatment") and extracted.get("alternative_options"):
@@ -374,7 +486,7 @@ class KINaturalizationAgent(BaseAgent):
                 prompt=user_prompt,
                 system_prompt=system_prompt,
                 max_tokens=400,
-                temperature=0
+                temperature=0.1
             )
             # Parse JSON from response
             try:

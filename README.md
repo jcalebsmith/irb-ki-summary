@@ -40,8 +40,8 @@ pip install -r requirements.txt
 4. Set up environment variables:
 Create a `.env` file in the project root and add your Azure OpenAI credentials:
 ```dotenv
-AZURE_OPENAI_ENDPOINT=<your_azure_openai_endpoint>
-AZURE_OPENAI_API_KEY=<your_azure_openai_api_key>
+OPENAI_API_BASE=<your_OPENAI_API_BASE>
+OPENAI_API_KEY=<your_OPENAI_API_KEY>
 OPENAI_API_VERSION=<your_openai_api_version>
 AZURE_OPENAI_DEPLOYMENT_LLM=<your_llm_deployment_name>
 AZURE_OPENAI_DEPLOYMENT_EMBED=<your_embedding_deployment_name>

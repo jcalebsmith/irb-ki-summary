@@ -7,11 +7,15 @@ across the codebase.
 
 import re
 import hashlib
+import asyncio
 from pathlib import Path
-from typing import Optional, Any, Union
+from typing import Optional, Any, Union, Dict, Callable, TypeVar, Type
 import json
 import numpy as np
 from datetime import datetime
+from pydantic import BaseModel
+
+T = TypeVar('T')
 
 
 class TextProcessingUtils:
@@ -527,3 +531,121 @@ class TemplateUtils:
         """
         pattern = r'\{\{\s*\w+\s*\}\}'
         return bool(re.search(pattern, text))
+
+
+class DocumentUtils:
+    """Utilities for document processing."""
+    
+    @staticmethod
+    def extract_document_context(parameters: Dict[str, Any]) -> str:
+        """
+        Extract document context from various parameter formats.
+        
+        Args:
+            parameters: Parameters dictionary that may contain document data
+            
+        Returns:
+            Extracted document text
+        """
+        for key in ['document', 'document_context', 'document_text', 'content']:
+            if key in parameters:
+                doc = parameters[key]
+                return doc.text if hasattr(doc, 'text') else str(doc)
+        return ""
+    
+    @staticmethod
+    def extract_enum_value(extracted: dict, key: str, default: str = "") -> str:
+        """
+        Extract enum value with fallback to string representation.
+        
+        Args:
+            extracted: Dictionary with extracted values
+            key: Key to extract
+            default: Default value if key not found
+            
+        Returns:
+            String value of the enum or default
+        """
+        value = extracted.get(key, default)
+        return value.value if hasattr(value, 'value') else str(value) if value else default
+
+
+class AsyncUtils:
+    """Utilities for async operations."""
+    
+    @staticmethod
+    async def with_retry(func: Callable[[], T], 
+                        max_attempts: int = 3,
+                        backoff_base: int = 2) -> T:
+        """
+        Execute async function with retry logic and exponential backoff.
+        
+        Args:
+            func: Async function to execute
+            max_attempts: Maximum number of attempts
+            backoff_base: Base for exponential backoff
+            
+        Returns:
+            Result from successful function execution
+            
+        Raises:
+            Exception: The last exception if all attempts fail
+        """
+        last_exception = None
+        for attempt in range(max_attempts):
+            try:
+                return await func()
+            except Exception as e:
+                last_exception = e
+                if attempt == max_attempts - 1:
+                    raise
+                await asyncio.sleep(backoff_base ** attempt)
+        raise last_exception
+
+
+class SchemaUtils:
+    """Utilities for schema generation."""
+    
+    @staticmethod
+    def generate_extraction_schema(model_class: Type[BaseModel]) -> Dict[str, Any]:
+        """
+        Generate extraction schema from Pydantic model.
+        
+        Args:
+            model_class: Pydantic model class
+            
+        Returns:
+            Schema dictionary for extraction
+        """
+        schema = {}
+        for field_name, field_info in model_class.model_fields.items():
+            field_type = field_info.annotation
+            
+            # Handle optional types
+            if hasattr(field_type, '__origin__'):
+                if field_type.__origin__ is Union:
+                    # Get the non-None type from Optional
+                    field_type = next((arg for arg in field_type.__args__ if arg is not type(None)), str)
+            
+            # Map Python types to schema types
+            type_name = "string"  # default
+            if field_type is bool:
+                type_name = "boolean"
+            elif field_type in (int, float):
+                type_name = "number"
+            elif field_type is list:
+                type_name = "array"
+            elif hasattr(field_type, '__name__'):
+                type_name = field_type.__name__.lower()
+            
+            schema[field_name] = {
+                "type": type_name,
+                "description": field_info.description or f"Field: {field_name}"
+            }
+            
+            # Add enum values if present
+            if hasattr(field_info, 'json_schema_extra') and field_info.json_schema_extra:
+                if 'enum' in field_info.json_schema_extra:
+                    schema[field_name]['enum'] = field_info.json_schema_extra['enum']
+        
+        return schema

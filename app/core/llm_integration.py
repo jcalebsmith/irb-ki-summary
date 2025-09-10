@@ -4,15 +4,16 @@ Provides base LLM functionality with Pydantic model support
 """
 import os
 import json
-from typing import Dict, Any, List, Optional, Union, Type
+from typing import Dict, Any, List, Optional, Union, Type, Tuple
 from dotenv import load_dotenv
 from pathlib import Path
 from pydantic import BaseModel
-from llama_index.llms.azure_openai import AzureOpenAI as AzureOpenAILLM
-from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
-from llama_index.core.llms import ChatMessage
-from llama_index.core.prompts import PromptTemplate
+from openai import AzureOpenAI
 from app.core.exceptions import LLMError, ExtractionError
+from app.core.llm_validation import (
+    LLMSelfHealingExtractor,
+    DocumentValidationResult
+)
 
 # Load environment variables from app/.env
 env_path = Path(__file__).parent.parent / '.env'
@@ -25,26 +26,19 @@ class GenericLLMExtractor:
     """
     
     def __init__(self):
-        """Initialize Azure OpenAI client using LlamaIndex with structured output support"""
-        organization = os.getenv("ORGANIZATION", "231173")
-        api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        # Use latest API version for structured outputs
-        api_version = os.getenv("API_VERSION", "2024-10-21")
+        """Initialize Azure OpenAI client"""
+        from app.config import AZURE_OPENAI_CONFIG
         
-        # Use LlamaIndex Azure OpenAI client with structured output support
-        self.llm = AzureOpenAILLM(
-            model="gpt-4o",
-            engine="gpt-4o",
-            deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_LLM", "text-embedding-3-small"),
-            api_key=api_key,
-            azure_endpoint=azure_endpoint,
-            api_version=api_version,
-            default_headers={"OpenAI-Organization": organization, "Shortcode": organization},
-            temperature=0,  # Minimum temperature for consistency
-            top_p=0.0,      # Deterministic sampling
-            organization=organization,
+        # Use AzureOpenAI client with proper configuration
+        self.client = AzureOpenAI(
+            api_key=AZURE_OPENAI_CONFIG["api_key"],
+            api_version=AZURE_OPENAI_CONFIG["api_version"],
+            azure_endpoint=AZURE_OPENAI_CONFIG["endpoint"],
+            default_headers=AZURE_OPENAI_CONFIG["default_headers"],
         )
+        # Use gpt-4o as the deployment name
+        self.model = "gpt-4o"
+        self.temperature = AZURE_OPENAI_CONFIG["temperature"]
         
         self.deployment = os.getenv("DEPLOYMENT_ID", "gpt-4o")
     
@@ -63,38 +57,89 @@ class GenericLLMExtractor:
         Returns:
             Instance of the Pydantic model with extracted data
         """
-        try:
-            # Build system prompt
-            if not system_prompt:
-                system_prompt = (
-                    "You are an expert at extracting structured information from documents. "
-                    "Extract the requested information accurately and concisely. "
-                    "Follow the schema requirements strictly."
+        import asyncio
+        
+        # Simple retry with exponential backoff
+        for attempt in range(3):
+            try:
+                # Create JSON schema from Pydantic model
+                schema = output_cls.model_json_schema()
+                
+                # Build system prompt with schema
+                if not system_prompt:
+                    system_prompt = (
+                        "You are an expert at extracting structured information from documents. "
+                        "Extract the requested information accurately and concisely. "
+                        "You must return valid JSON that matches this schema:\n\n"
+                        f"{json.dumps(schema, indent=2)}\n\n"
+                        "Follow the schema requirements strictly and ensure all required fields are present."
+                    )
+                
+                # Build messages for Azure OpenAI SDK
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Extract information from this document and return as JSON:\n\n{document_context[:12000]}"}
+                ]
+                
+                # Get structured response using chat.completions.create
+                print(f"DEBUG: Calling Azure OpenAI API with model={self.model}", flush=True)
+                
+                # Use chat.completions.create with JSON response format
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    response_format={"type": "json_object"},
+                    temperature=self.temperature,
+                    timeout=30,  # Add 30 second timeout
                 )
+                print("DEBUG: Azure OpenAI API call completed", flush=True)
+                
+                # Parse the JSON response
+                response_text = response.choices[0].message.content
+                result_dict = json.loads(response_text)
+                result = output_cls(**result_dict)
+                
+                return result
+                
+            except Exception as e:
+                if attempt == 2:  # Last attempt
+                    raise LLMError(
+                        "structured_extraction",
+                        f"Failed to extract structured data after 3 attempts: {e}",
+                        {"output_class": output_cls.__name__}
+                    )
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff: 1s, 2s
+    
+    async def extract_structured_with_validation(self,
+                                                document_context: str,
+                                                output_cls: Type[BaseModel],
+                                                validate: bool = True,
+                                                max_attempts: int = 3) -> Tuple[BaseModel, Optional[DocumentValidationResult]]:
+        """
+        Extract structured data with semantic validation and self-healing
+        
+        Args:
+            document_context: Document text to extract from
+            output_cls: Pydantic model class defining the output structure
+            validate: Whether to perform semantic validation
+            max_attempts: Maximum extraction attempts for self-healing
             
-            # Convert LLM to structured LLM with Pydantic model
-            structured_llm = self.llm.as_structured_llm(output_cls=output_cls)
-            
-            # Build messages
-            messages = [
-                ChatMessage(role="system", content=system_prompt),
-                ChatMessage(role="user", content=f"Extract information from this document:\n\n{document_context[:8000]}")
-            ]
-            
-            # Get structured response
-            response = structured_llm.chat(messages)
-            
-            # The response.raw contains the Pydantic model instance
-            result = response.raw
-            
-            return result
-            
-        except Exception as e:
-            raise LLMError(
-                "structured_extraction",
-                f"Failed to extract structured data: {str(e)}",
-                {"output_class": output_cls.__name__}
-            )
+        Returns:
+            Tuple of (extracted model, validation result if validate=True)
+        """
+        if not validate:
+            # Standard extraction without validation
+            result = await self.extract_structured(document_context, output_cls)
+            return result, None
+        
+        # Use LLM-based self-healing extractor with validation
+        healer = LLMSelfHealingExtractor(self, max_attempts=max_attempts)
+        extraction, validation = await healer.extract_with_validation(
+            document_context=document_context,
+            output_cls=output_cls
+        )
+        
+        return extraction, validation
     
     async def extract_json(self, 
                           document_context: str,
@@ -146,27 +191,26 @@ class GenericLLMExtractor:
             )
             
             messages = [
-                ChatMessage(role="system", content=system_prompt),
-                ChatMessage(role="user", content=user_prompt)
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
             ]
             
-            # Use LlamaIndex LLM for chat completion
-            response = self.llm.chat(messages)
+            # Use OpenAI SDK for chat completion
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+            )
             
             # Parse response
-            response_text = response.message.content
-            # Try to extract JSON from the response
-            try:
-                result = json.loads(response_text)
-            except json.JSONDecodeError:
-                # Try to find JSON in the response
-                import re
-                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                if json_match:
-                    result = json.loads(json_match.group())
-                else:
-                    print(f"Could not parse JSON from response: {response_text[:200]}")
-                    return {"error": "Failed to parse JSON"}
+            response_text = response.choices[0].message.content
+            
+            # Use utility for JSON extraction
+            from app.core.utils import JSONUtils
+            result = JSONUtils.extract_json_from_text(response_text)
+            if result is None:
+                print(f"Could not parse JSON from response: {response_text[:200]}")
+                return {"error": "Failed to parse JSON"}
             
             return result
             
@@ -199,20 +243,24 @@ class GenericLLMExtractor:
         """
         try:
             messages = [
-                ChatMessage(
-                    role="system",
-                    content=f"Extract the requested information in {max_words} words or less."
-                ),
-                ChatMessage(
-                    role="user",
-                    content=f"{query}\n\nDocument:\n{document_context[:4000]}"
-                )
+                {
+                    "role": "system",
+                    "content": f"Extract the requested information in {max_words} words or less."
+                },
+                {
+                    "role": "user",
+                    "content": f"{query}\n\nDocument:\n{document_context[:4000]}"
+                }
             ]
             
-            # Use LlamaIndex LLM for chat completion
-            response = self.llm.chat(messages)
+            # Use OpenAI SDK for chat completion
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+            )
             
-            result = response.message.content.strip()
+            result = response.choices[0].message.content.strip()
             return result
             
         except Exception as e:
@@ -247,10 +295,14 @@ class GenericLLMExtractor:
                 }
             ]
             
-            # Use LlamaIndex LLM for chat completion
-            response = self.llm.chat(messages)
+            # Use OpenAI SDK for chat completion
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+            )
             
-            answer = response.message.content.strip().upper()
+            answer = response.choices[0].message.content.strip().upper()
             result = answer == "YES"
             return result
             
@@ -278,23 +330,27 @@ class GenericLLMExtractor:
         """
         try:
             messages = [
-                ChatMessage(
-                    role="system",
-                    content=(
+                {
+                    "role": "system",
+                    "content": (
                         f"Based on the document, select the most appropriate option from: "
                         f"{', '.join(allowed_values)}. Return only the selected option."
                     )
-                ),
-                ChatMessage(
-                    role="user",
-                    content=f"{query}\n\nDocument:\n{document_context[:4000]}"
-                )
+                },
+                {
+                    "role": "user",
+                    "content": f"{query}\n\nDocument:\n{document_context[:4000]}"
+                }
             ]
             
-            # Use LlamaIndex LLM for chat completion
-            response = self.llm.chat(messages)
+            # Use OpenAI SDK for chat completion
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+            )
             
-            result = response.message.content.strip()
+            result = response.choices[0].message.content.strip()
             # Validate it's in allowed values
             if result not in allowed_values and allowed_values:
                 result = allowed_values[0]  # Default to first option
@@ -312,7 +368,7 @@ class GenericLLMExtractor:
                       prompt: str,
                       system_prompt: str = None,
                       max_tokens: int = 500,
-                      temperature: float = 0.7) -> str:
+                      temperature: float = 0.1) -> str:
         """
         Generic completion for any prompt
         
@@ -328,13 +384,18 @@ class GenericLLMExtractor:
         try:
             messages = []
             if system_prompt:
-                messages.append(ChatMessage(role="system", content=system_prompt))
-            messages.append(ChatMessage(role="user", content=prompt))
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
             
-            # Use LlamaIndex LLM for chat completion
-            response = self.llm.chat(messages)
+            # Use OpenAI SDK for chat completion
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
             
-            return response.message.content
+            return response.choices[0].message.content
             
         except Exception as e:
             raise LLMError(
@@ -345,17 +406,6 @@ class GenericLLMExtractor:
     
 
 
-# Global instance
-_extractor_instance = None
-
 def get_generic_extractor() -> GenericLLMExtractor:
-    """Get or create global generic extractor instance"""
-    global _extractor_instance
-    if _extractor_instance is None:
-        _extractor_instance = GenericLLMExtractor()
-    return _extractor_instance
-
-# Backward compatibility alias
-def get_extractor():
-    """Backward compatibility - returns generic extractor"""
-    return get_generic_extractor()
+    """Create a new generic extractor instance"""
+    return GenericLLMExtractor()

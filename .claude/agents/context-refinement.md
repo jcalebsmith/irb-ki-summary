@@ -1,7 +1,7 @@
 ---
 name: context-refinement
-description: Updates task context manifest with discoveries from current work session. Reads transcript to understand what was learned. Only updates if drift or new discoveries found. Also updates persistent memory.
-tools: Read, Edit, MultiEdit, LS, Glob, Bash
+description: Updates task context manifest with discoveries from current work session. Reads transcript to understand what was learned. Only updates if drift or new discoveries found.
+tools: Read, Edit, MultiEdit, LS, Glob
 ---
 
 # Context Refinement Agent
@@ -99,21 +99,3 @@ Ask yourself:
 ## Remember
 
 You are the guardian of institutional knowledge. Your updates help future developers avoid the same surprises and pitfalls. Only document true discoveries that change understanding of the system, not implementation details or choices.
-
-## Memory Persistence
-
-After updating the task context (or even if no updates were needed), capture key learnings in persistent memory:
-
-1. **Extract Key Learnings** from the transcript that are worth remembering across sessions
-2. **Run Memory Update Command** to store discoveries:
-   ```bash
-   python .claude/hooks/update_memory.py --task "task-name" --learnings "learning1|learning2|learning3"
-   ```
-3. **Categories to Capture:**
-   - Bug patterns and solutions
-   - User preferences (testing frameworks, coding styles, workflows)
-   - Codebase insights (hidden dependencies, performance gotchas)
-   - Successful patterns and approaches
-   - Failed approaches to avoid
-
-The memory system will persist these learnings for future sessions, making Claude progressively more knowledgeable about the codebase and user preferences.

@@ -5,14 +5,6 @@ import sys
 from pathlib import Path
 from shared_state import check_daic_mode_bool, get_project_root
 
-# Import memory capture functions
-sys.path.insert(0, str(Path(__file__).parent))
-try:
-    from memory_capture import process_tool_use
-    MEMORY_ENABLED = True
-except ImportError:
-    MEMORY_ENABLED = False
-
 # Load input
 input_data = json.load(sys.stdin)
 tool_name = input_data.get("tool_name", "")
@@ -30,19 +22,6 @@ if tool_name == "Task" and in_subagent:
     subagent_flag.unlink()
     # Don't show DAIC reminder for Task completion
     in_subagent = True
-
-# Capture tool use in memory if enabled
-if MEMORY_ENABLED and not in_subagent:
-    try:
-        tool_data = {
-            "tool_name": tool_name,
-            "parameters": tool_input,
-            "cwd": cwd
-        }
-        process_tool_use(tool_data)
-    except Exception:
-        # Silently fail to not disrupt workflow
-        pass
 
 # Check current mode
 discussion_mode = check_daic_mode_bool()

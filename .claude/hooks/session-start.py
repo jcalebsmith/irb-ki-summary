@@ -5,7 +5,7 @@ import os
 import sys
 import subprocess
 from pathlib import Path
-from shared_state import get_project_root, ensure_state_dir, get_task_state, get_contextual_memory
+from shared_state import get_project_root, ensure_state_dir, get_task_state
 
 # Get project root
 PROJECT_ROOT = get_project_root()
@@ -19,7 +19,7 @@ try:
             developer_name = config.get('developer_name', 'the developer')
     else:
         developer_name = 'the developer'
-except (json.JSONDecodeError, OSError, KeyError) as e:
+except:
     developer_name = 'the developer'
 
 # Initialize context
@@ -46,7 +46,7 @@ try:
         if not shutil.which('daic'):
             needs_setup = True
             quick_checks.append("daic command")
-except (ImportError, AttributeError, OSError) as e:
+except:
     needs_setup = True
     quick_checks.append("daic command")
 
@@ -99,12 +99,6 @@ if sessions_dir.exists():
                         task_content = '\n'.join(lines)
                         break
             
-            # Load contextual memory for the current task
-            contextual_memory = get_contextual_memory(
-                task_name=task_state.get("task"),
-                affected_files=task_state.get("services", [])
-            )
-            
             # Output the full task state
             context += f"""Current task state:
 ```json
@@ -116,36 +110,6 @@ Loading task file: {task_state['task']}.md
 {task_content}
 {"=" * 60}
 """
-            
-            # Add memory context if available
-            if contextual_memory:
-                has_memory = False
-                memory_output = "\n📚 Relevant Memory Context:\n"
-                
-                if contextual_memory.get("user_preferences"):
-                    has_memory = True
-                    memory_output += "\n🔹 User Preferences:\n"
-                    for pref in contextual_memory["user_preferences"]:
-                        memory_output += f"  • {pref}\n"
-                
-                if contextual_memory.get("recent_episodes"):
-                    has_memory = True
-                    memory_output += "\n🔹 Related Past Work:\n"
-                    for episode in contextual_memory["recent_episodes"]:
-                        memory_output += f"  • Task: {episode['task']}\n"
-                        for learning in episode.get("learnings", [])[:3]:  # Show top 3 learnings
-                            memory_output += f"    - {learning}\n"
-                
-                if contextual_memory.get("relevant_entities"):
-                    has_memory = True
-                    memory_output += "\n🔹 Known Issues/Patterns:\n"
-                    for entity, data in contextual_memory["relevant_entities"].items():
-                        memory_output += f"  • {entity}:\n"
-                        for obs in data.get("observations", [])[:2]:  # Show top 2 observations
-                            memory_output += f"    - {obs['content']}\n"
-                
-                if has_memory:
-                    context += memory_output + "\n"
             
             if task_updated:
                 context += """

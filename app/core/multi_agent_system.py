@@ -85,7 +85,6 @@ class GenerationAgent(BaseAgent):
         
         if self.llm:
             # Use LLM to generate content
-            from llama_index.core.llms import ChatMessage
             
             # Generate introduction section
             if "study_title" in extracted:
@@ -94,9 +93,14 @@ class GenerationAgent(BaseAgent):
                 Keep it under 100 words and focus on the purpose and importance."""
                 
                 try:
-                    messages = [ChatMessage(role="user", content=prompt)]
-                    response = self.llm.chat(messages)
-                    generated["section1_intro"] = response.message.content.strip()
+                    # Direct OpenAI SDK call through the extractor's client
+                    messages = [{"role": "user", "content": prompt}]
+                    response = self.llm.client.chat.completions.create(
+                        model=self.llm.model,
+                        messages=messages,
+                        temperature=self.llm.temperature,
+                    )
+                    generated["section1_intro"] = response.choices[0].message.content.strip()
                 except (LLMError, Exception) as e:
                     # Fallback to simple generation on any LLM error
                     generated["section1_intro"] = f"This research study, titled '{extracted['study_title']}', aims to advance our understanding."
@@ -115,9 +119,13 @@ class GenerationAgent(BaseAgent):
                     Write in second person, be concise and clear."""
                     
                     try:
-                        messages = [ChatMessage(role="user", content=prompt)]
-                        response = self.llm.chat(messages)
-                        generated["section5_content"] = response.message.content.strip()
+                        messages = [{"role": "user", "content": prompt}]
+                        response = self.llm.client.chat.completions.create(
+                            model=self.llm.model,
+                            messages=messages,
+                            temperature=self.llm.temperature,
+                        )
+                        generated["section5_content"] = response.choices[0].message.content.strip()
                     except (LLMError, Exception) as e:
                         # Fallback on any LLM error
                         if "duration" in extracted and "visits" in extracted:

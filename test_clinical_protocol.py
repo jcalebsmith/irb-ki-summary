@@ -15,16 +15,14 @@ from typing import Dict, Any, List
 import hashlib
 import time
 
-# Set up logging for test output
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger(__name__)
+# Set up logging and paths using utilities
+from tests.test_utils import setup_test_logging, setup_test_paths
 
-# Add app directory to path
-sys.path.append(str(Path(__file__).parent / "app"))
-sys.path.append(str(Path(__file__).parent))
+logger = setup_test_logging(__name__)
+ROOT_DIR, APP_DIR = setup_test_paths()
 
 # Import configuration and test utilities
-from config import TEST_CONFIG, get_test_pdf_path
+from app.config import TEST_CONFIG, get_test_pdf_path
 from tests.test_utils import (
     setup_azure_openai, 
     convert_numpy_types,
@@ -36,7 +34,7 @@ from tests.test_utils import (
 from core.document_framework import DocumentGenerationFramework, EnhancedValidationOrchestrator
 from plugins.clinical_protocol_plugin import ClinicalProtocolPlugin
 from pdf import read_pdf
-from llama_index.core.schema import Document
+from app.core.document_models import Document
 
 # Set up Azure OpenAI models
 embed_model, llm = setup_azure_openai()

@@ -15,7 +15,6 @@ from logger import get_logger
 
 from .plugin_manager import PluginManager, ValidationRuleSet
 from .template_engine import Jinja2Engine
-from .rag_pipeline import StreamingRAGPipeline
 from .multi_agent_system import MultiAgentPool
 from .validators import ValidationOrchestrator, EnhancedValidationOrchestrator
 from .exceptions import (
@@ -29,7 +28,7 @@ from .types import (
     ValidationResult, ValidationConstants, ProcessingConstants,
     DocumentMetadata, SectionContent, ErrorCodes, ProcessingError
 )
-from llama_index.core.schema import Document
+from .document_models import Document
 
 # Set up module logger
 logger = get_logger("core.document_framework")
@@ -93,11 +92,7 @@ class DocumentGenerationFramework:
         """
         self.plugin_manager = PluginManager(plugin_dir)
         self.template_engine = Jinja2Engine(template_dir)
-        self.rag_pipeline = StreamingRAGPipeline(
-            chunking_method="SPLICE",
-            embed_model=embed_model,
-            llm=llm
-        )
+        # RAG pipeline removed - was never actually used for retrieval
         self.validation_orchestrator = ValidationOrchestrator()
         self.agent_pool = MultiAgentPool(llm=llm)  # Pass LLM to multi-agent system
     
@@ -194,9 +189,9 @@ class DocumentGenerationFramework:
         context = parameters.copy()
         
         if document:
-            # Process document using SPLICE chunking for optimal retrieval
-            nodes = self.rag_pipeline.process_document(document)
-            self.rag_pipeline.build_index(nodes)
+            # Document is available for processing by agents
+            context["document"] = document
+            context["document_text"] = document.text
             context["document_processed"] = True
             
         return context
@@ -327,10 +322,10 @@ class DocumentGenerationFramework:
             yield f"Error: No plugin found for {document_type}"
             return
         
-        # Process document with streaming
+        # Document available for processing
         if document:
-            nodes = self.rag_pipeline.process_document(document)
-            self.rag_pipeline.build_index(nodes)
+            parameters["document"] = document
+            parameters["document_text"] = document.text
         
         # Stream template rendering
         template_path = plugin.resolve_template(parameters)

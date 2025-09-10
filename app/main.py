@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from .pdf import read_pdf
 from .core.document_framework import DocumentGenerationFramework
 from .core.exceptions import DocumentFrameworkError, PDFProcessingError
-from llama_index.core.schema import Document
+from .core.document_models import Document
 
 
 def convert_section(text):
