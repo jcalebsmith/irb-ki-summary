@@ -2,84 +2,30 @@
 Multi-Agent System for Document Generation
 Implements specialized agents with orchestration and validation
 """
-from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass, field
 import asyncio
-from enum import Enum
 import json
 import re
 from .exceptions import AgentError, AgentCommunicationError, LLMError
+from .agent_interfaces import (
+    BaseAgent, AgentRole, AgentContext, AgentMessage,
+    AgentCapability, agent_registry
+)
 
 
-class AgentRole(Enum):
-    """Roles that agents can play in the system"""
-    EXTRACTOR = "extractor"  # Extracts information from documents
-    GENERATOR = "generator"  # Generates new content
-    VALIDATOR = "validator"  # Validates content and intent
-    ROUTER = "router"  # Routes tasks to appropriate agents
-    SPECIALIST = "specialist"  # Domain-specific specialist
-
-
-@dataclass
-class AgentMessage:
-    """Message passed between agents"""
-    sender: str
-    recipient: str
-    content: Any
-    message_type: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    timestamp: Optional[float] = None
-
-
-@dataclass
-class AgentContext:
-    """Shared context for agent collaboration"""
-    document_type: str
-    parameters: Dict[str, Any]
-    extracted_values: Dict[str, Any] = field(default_factory=dict)
-    generated_content: Dict[str, str] = field(default_factory=dict)
-    validation_results: Dict[str, Any] = field(default_factory=dict)
-    critical_values: List[str] = field(default_factory=list)
-    messages: List[AgentMessage] = field(default_factory=list)
-
-
-class BaseAgent(ABC):
-    """Base class for all agents in the system"""
-    
-    def __init__(self, name: str, role: AgentRole):
-        self.name = name
-        self.role = role
-        self.context: Optional[AgentContext] = None
-    
-    @abstractmethod
-    async def process(self, context: AgentContext) -> Dict[str, Any]:
-        """Process the context and return results"""
-        pass
-    
-    def send_message(self, recipient: str, content: Any, message_type: str = "info"):
-        """Send a message to another agent"""
-        if self.context:
-            message = AgentMessage(
-                sender=self.name,
-                recipient=recipient,
-                content=content,
-                message_type=message_type
-            )
-            self.context.messages.append(message)
-    
-    def receive_messages(self) -> List[AgentMessage]:
-        """Receive messages addressed to this agent"""
-        if not self.context:
-            return []
-        return [msg for msg in self.context.messages if msg.recipient == self.name]
+# AgentRole, AgentMessage, AgentContext, and BaseAgent are now imported from agent_interfaces.py
+# This provides better separation of concerns and cleaner interfaces
 
 
 class ExtractionAgent(BaseAgent):
-    """Agent specialized in extracting information from documents"""
+    """Agent specialized in extracting information from documents."""
     
     def __init__(self, name: str = "ExtractorAgent"):
         super().__init__(name, AgentRole.EXTRACTOR)
+        self._capabilities = {
+            AgentCapability.REGEX_EXTRACTION: True,
+            AgentCapability.STRUCTURED_EXTRACTION: True
+        }
         self.extraction_patterns = {
             "study_title": r"(?:Title|Study|Protocol):\s*([^\n]+)",
             "principal_investigator": r"(?:PI|Principal Investigator|Investigator):\s*([^\n]+)",
@@ -89,12 +35,15 @@ class ExtractionAgent(BaseAgent):
             "visits": r"(\d+)\s*(?:visits?|appointments?)",
         }
     
-    async def process(self, context: AgentContext) -> Dict[str, Any]:
-        """Extract key information from document"""
+    async def process(self, context: AgentContext) -> dict[str, Any]:
+        """Extract key information from document."""
         self.context = context
-        extracted = {}
         
-        # Get document text from parameters
+        # Validate input
+        if not self.validate_input(context):
+            return {"error": "Invalid context for extraction"}
+        
+        extracted = {}
         doc_text = context.parameters.get("document_text", "")
         
         # Extract using patterns
@@ -113,18 +62,25 @@ class ExtractionAgent(BaseAgent):
 
 
 class GenerationAgent(BaseAgent):
-    """Agent specialized in generating content"""
+    """Agent specialized in generating content using templates or LLM."""
     
     def __init__(self, name: str = "GeneratorAgent", llm=None):
         super().__init__(name, AgentRole.GENERATOR)
         self.llm = llm
+        self._capabilities = {
+            AgentCapability.TEMPLATE_GENERATION: True,
+            AgentCapability.LLM_GENERATION: llm is not None
+        }
     
-    async def process(self, context: AgentContext) -> Dict[str, Any]:
-        """Generate content based on context using LLM"""
+    async def process(self, context: AgentContext) -> dict[str, Any]:
+        """Generate content based on context using LLM or templates."""
         self.context = context
-        generated = {}
         
-        # Generate section content based on extracted values
+        # Validate input
+        if not self.validate_input(context):
+            return {"error": "Invalid context for generation"}
+        
+        generated = {}
         extracted = context.extracted_values
         
         if self.llm:
@@ -188,19 +144,29 @@ class GenerationAgent(BaseAgent):
 
 
 class ValidationAgent(BaseAgent):
-    """Agent specialized in validation and intent preservation"""
+    """Agent specialized in validation and intent preservation."""
     
     def __init__(self, name: str = "ValidatorAgent"):
         super().__init__(name, AgentRole.VALIDATOR)
+        self._capabilities = {
+            AgentCapability.RULE_VALIDATION: True,
+            AgentCapability.INTENT_VALIDATION: True,
+            AgentCapability.STRUCTURAL_VALIDATION: True
+        }
         self.validation_rules = {
             "required_fields": ["study_title", "principal_investigator"],
             "max_lengths": {"study_title": 200, "section1_intro": 500},
             "intent_critical": ["study_title", "irb_number", "duration", "visits"]
         }
     
-    async def process(self, context: AgentContext) -> Dict[str, Any]:
-        """Validate content and check intent preservation"""
+    async def process(self, context: AgentContext) -> dict[str, Any]:
+        """Validate content and check intent preservation."""
         self.context = context
+        
+        # Validate input
+        if not self.validate_input(context):
+            return {"error": "Invalid context for validation"}
+        
         results = {
             "passed": True,
             "issues": [],
@@ -244,10 +210,14 @@ class ValidationAgent(BaseAgent):
 
 
 class OrchestrationAgent(BaseAgent):
-    """Agent that orchestrates other agents"""
+    """Agent that orchestrates other agents in a pipeline."""
     
     def __init__(self, name: str = "OrchestratorAgent"):
-        super().__init__(name, AgentRole.ROUTER)
+        super().__init__(name, AgentRole.ORCHESTRATOR)
+        self._capabilities = {
+            AgentCapability.PIPELINE_ORCHESTRATION: True,
+            AgentCapability.PARALLEL_ORCHESTRATION: True
+        }
         self.agents: Dict[str, BaseAgent] = {}
     
     def register_agent(self, agent: BaseAgent):
@@ -448,8 +418,8 @@ class MultiAgentPool:
             self.orchestrator.register_agent(agent)
     
     async def orchestrate(self, 
-                         agents: List[BaseAgent], 
-                         parameters: Dict[str, Any]) -> Dict[str, Any]:
+                         agents: list[BaseAgent], 
+                         parameters: dict[str, Any]) -> dict[str, Any]:
         """
         Enhanced orchestration with agent collaboration
         
