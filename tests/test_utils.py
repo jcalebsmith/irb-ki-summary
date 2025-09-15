@@ -58,13 +58,14 @@ def setup_azure_openai() -> Tuple[Any, Any]:
     """
     print("DEBUG: setup_azure_openai() - Starting", flush=True)
     
-    from app.core.llm_integration import GenericLLMExtractor
-    print("DEBUG: setup_azure_openai() - GenericLLMExtractor imported", flush=True)
+    from app.core.llm_client import SimpleLLMClient
     
-    # Initialize LLM extractor which now uses direct OpenAI SDK
-    print("DEBUG: setup_azure_openai() - About to create GenericLLMExtractor instance", flush=True)
-    llm = GenericLLMExtractor()
-    print(f"DEBUG: setup_azure_openai() - GenericLLMExtractor created: {llm}", flush=True)
+    print("DEBUG: setup_azure_openai() - SimpleLLMClient imported", flush=True)
+    
+    # Initialize LLM client which now uses direct OpenAI SDK
+    print("DEBUG: setup_azure_openai() - About to create SimpleLLMClient instance", flush=True)
+    llm = SimpleLLMClient()
+    print(f"DEBUG: setup_azure_openai() - SimpleLLMClient created: {llm}", flush=True)
     
     # Embedding model not needed anymore since RAG pipeline was removed
     embed_model = None

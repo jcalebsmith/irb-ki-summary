@@ -1,31 +1,31 @@
 {
   "num_runs": 3,
   "successful_runs": 3,
-  "unique_outputs": 2,
-  "consistency_rate": 0.6666666666666667,
+  "unique_outputs": 3,
+  "consistency_rate": 0.33333333333333337,
   "report": {
     "overall_metrics": {
-      "mean_cv": 0.10770857291493488,
+      "mean_cv": 0.6250361547295008,
       "meets_target": true
     },
     "by_document_type": {
       "informed-consent": {
         "runs": 3,
-        "cv": 0.10770857291493488,
-        "structural_consistency": 0.6666666666666667,
-        "mean_word_count": 437.6666666666667,
-        "unique_outputs": 2
+        "cv": 0.6250361547295008,
+        "structural_consistency": 0.33333333333333337,
+        "mean_word_count": 471.0,
+        "unique_outputs": 3
       }
     }
   },
   "hashes": [
-    "1bda817c4279bf9f82e76af3242ee5c1d4c5bbd5d1e6aefb78a3bd469b91505c",
-    "1bda817c4279bf9f82e76af3242ee5c1d4c5bbd5d1e6aefb78a3bd469b91505c",
-    "082955a568596a231a8aba52d97bbf2f69c93a642692b18d8e417e724fd0827d"
+    "452774b682b0ca4cca5e4a85ee5566a301ea887034f09931b9c207c3733a65a9",
+    "3d41a7cb906d5958f40524469d81632f350b427c3a4d8d2ee9a21e007ae78824",
+    "fd5609c9b2285465c60a7d16c68e52e5e4eb2abe2c55151928bb72802bdd25a4"
   ],
   "word_counts": [
-    438,
-    438,
-    437
+    468,
+    475,
+    470
   ]
 }

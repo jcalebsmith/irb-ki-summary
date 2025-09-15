@@ -20,14 +20,49 @@ from app.core.plugin_manager import (
     TemplateSlot,
     SlotType
 )
-from app.core.multi_agent_system import (
+from app.core.agent_interfaces import (
     BaseAgent, 
-    AgentRole, 
-    ExtractionAgent,
-    GenerationAgent,
-    ValidationAgent,
-    SpecialistAgent
+    AgentRole,
+    AgentContext
 )
+
+
+# Simple agent implementations for clinical protocol workflow
+class ExtractionAgent(BaseAgent):
+    """Simple extraction agent"""
+    def __init__(self, name: str):
+        super().__init__(name, AgentRole.EXTRACTOR)
+    
+    async def process(self, context: AgentContext) -> Dict[str, Any]:
+        return {"extracted": True}
+
+
+class GenerationAgent(BaseAgent):
+    """Simple generation agent"""
+    def __init__(self, name: str):
+        super().__init__(name, AgentRole.GENERATOR)
+    
+    async def process(self, context: AgentContext) -> Dict[str, Any]:
+        return {"generated": True}
+
+
+class ValidationAgent(BaseAgent):
+    """Simple validation agent"""
+    def __init__(self, name: str):
+        super().__init__(name, AgentRole.VALIDATOR)
+    
+    async def process(self, context: AgentContext) -> Dict[str, Any]:
+        return {"validated": True}
+
+
+class SpecialistAgent(BaseAgent):
+    """Simple specialist agent"""
+    def __init__(self, name: str, specialty: str):
+        super().__init__(name, AgentRole.SPECIALIST)
+        self.specialty = specialty
+    
+    async def process(self, context: AgentContext) -> Dict[str, Any]:
+        return {"specialty": self.specialty}
 
 
 @dataclass

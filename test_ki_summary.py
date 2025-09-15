@@ -36,13 +36,13 @@ from tests.test_utils import (
 
 print("DEBUG: Config and test utilities imported", flush=True)
 
-from core.document_framework import DocumentGenerationFramework, EnhancedValidationOrchestrator
+from app.core.document_framework import DocumentGenerationFramework, EnhancedValidationOrchestrator
 print("DEBUG: Document framework imported", flush=True)
 
-from plugins.informed_consent_plugin import InformedConsentPlugin
+from app.plugins.informed_consent_plugin import InformedConsentPlugin
 print("DEBUG: Plugin imported", flush=True)
 
-from pdf import read_pdf
+from app.pdf import read_pdf
 print("DEBUG: PDF reader imported", flush=True)
 
 from app.core.document_models import Document
@@ -307,14 +307,27 @@ async def main():
             # Display the summary with validation results
             display_summary(sections, result["validation_results"])
 
-            # Save output
+            # Save output with cleaner structure to avoid duplication
             output_file = "ki_summary_output.json"
+            
+            # Get metadata
+            metadata = result.get("metadata", {})
+            
+            # Initialize the cleaner output structure
+            output_data = {
+                "sections": sections,
+                "validation": result["validation_results"],
+                "metadata": {
+                    "plugin_id": metadata.get("plugin_id"),
+                    "template_used": metadata.get("template_used"),
+                    "document_type": metadata.get("document_type"),
+                    "chunking_method": metadata.get("chunking_method"),
+                    "agents_used": metadata.get("agents_used"),
+                }
+            }
+            
             with open(output_file, 'w') as f:
-                json.dump({
-                    "sections": sections,
-                    "validation_results": result["validation_results"],
-                    "metadata": result["metadata"],
-                }, f, indent=2)
+                json.dump(output_data, f, indent=2)
 
             logger.info(f"\nSummary saved to: {output_file}")
         else:

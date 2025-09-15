@@ -11,11 +11,11 @@ from collections import defaultdict
 import numpy as np
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
-from logger import get_logger
+from app.logger import get_logger
 
 from .plugin_manager import PluginManager, ValidationRuleSet
-from .template_engine import Jinja2Engine
-from .multi_agent_system import MultiAgentPool
+from .template_renderer import SimpleTemplateRenderer
+from .document_processor import SimpleDocumentProcessor
 from .validators import ValidationOrchestrator, EnhancedValidationOrchestrator
 from .exceptions import (
     DocumentFrameworkError,
@@ -91,10 +91,10 @@ class DocumentGenerationFramework:
             llm: Language model for generation
         """
         self.plugin_manager = PluginManager(plugin_dir)
-        self.template_engine = Jinja2Engine(template_dir)
+        self.template_engine = SimpleTemplateRenderer(template_dir)
         # RAG pipeline removed - was never actually used for retrieval
         self.validation_orchestrator = ValidationOrchestrator()
-        self.agent_pool = MultiAgentPool(llm=llm)  # Pass LLM to multi-agent system
+        self.agent_pool = SimpleDocumentProcessor(llm_client=llm)  # Pass LLM to document processor
     
     def get_global_parameters(self) -> Dict[str, Any]:
         """Get global parameters for template rendering"""
@@ -148,6 +148,7 @@ class DocumentGenerationFramework:
             # Step 4: Run agent orchestration
             agent_results = await self._run_agents(plugin, parameters)
             context = self._merge_agent_results(context, agent_results)
+            self._last_context = context  # Store context for metadata extraction
             
             # Step 5: Render template
             rendered_content = await self._render_template(
@@ -202,8 +203,48 @@ class DocumentGenerationFramework:
     
     async def _run_agents(self, plugin: Any, parameters: dict[str, Any]) -> dict[str, Any]:
         """Run multi-agent orchestration for document processing."""
+        # Use plugin's specialized agents if available
         agents = plugin.get_specialized_agents()
-        return await self.agent_pool.orchestrate(agents, parameters)
+        
+        if agents:
+            # Create AgentContext for plugin agents
+            from app.core.agent_interfaces import AgentContext
+            agent_context = AgentContext(
+                document_type=parameters.get("document_type", "informed-consent"),
+                parameters=parameters
+            )
+            
+            # Run each agent in sequence
+            for agent in agents:
+                if hasattr(agent, 'process'):
+                    result = await agent.process(agent_context)
+                    # Merge results back into context
+                    if isinstance(result, dict) and result.get("status") == "success":
+                        if "extracted" in result:
+                            agent_context.extracted_values.update(result["extracted"])
+            
+            # Return the accumulated context
+            return {
+                "extracted_values": agent_context.extracted_values,
+                "generated_content": agent_context.generated_content,
+                "validation_results": agent_context.validation_results
+            }
+        else:
+            # Fallback to SimpleDocumentProcessor if no plugin agents
+            from app.core.extraction_models import KIExtractionSchema
+            output_schema = KIExtractionSchema
+            
+            context = await self.agent_pool.process(
+                document_text=parameters.get("document_context", ""),
+                document_type="informed-consent",
+                output_schema=output_schema
+            )
+            
+            return {
+                "extracted_values": context.extracted_values,
+                "generated_content": context.generated_content,
+                "validation_results": context.validation_results
+            }
     
     def _merge_agent_results(self, context: dict[str, Any], 
                            agent_results) -> Dict[str, Any]:
@@ -213,22 +254,27 @@ class DocumentGenerationFramework:
         """
         if isinstance(agent_results, dict):
             context.update(agent_results)
+            # If the dict contains metadata, store it separately for later use
+            if 'metadata' in agent_results:
+                context['agent_metadata'] = agent_results['metadata']
         else:
             # Extract values from AgentContext object
             context.update({
                 "extracted_values": getattr(agent_results, 'extracted_values', {}),
                 "generated_content": getattr(agent_results, 'generated_content', {}),
-                "validation_results": getattr(agent_results, 'validation_results', {})
+                "validation_results": getattr(agent_results, 'validation_results', {}),
+                "agent_metadata": getattr(agent_results, 'metadata', {})  # Include agent metadata
             })
         return context
     
     async def _render_template(self, template_path: str, 
                               context: Dict[str, Any]) -> str:
         """Render the template with the provided context."""
+        # Merge global parameters into context for SimpleTemplateRenderer
+        full_context = {**context, **self.get_global_parameters()}
         return self.template_engine.render(
             template_path=template_path,
-            context=context,
-            globals=self.get_global_parameters()
+            context=full_context
         )
     
     async def _validate_output(self, plugin, context: Dict[str, Any], 
@@ -269,6 +315,12 @@ class DocumentGenerationFramework:
             parameters = getattr(self, '_last_parameters', {})
             workflow_steps = plugin.process_workflow(parameters, content)
             metadata["workflow_steps"] = workflow_steps
+        
+        # Include agent metadata if available (evidence data)
+        if hasattr(self, '_last_context') and 'agent_metadata' in self._last_context:
+            agent_metadata = self._last_context['agent_metadata']
+            if agent_metadata:
+                metadata.update(agent_metadata)
         
         return GenerationResult(
             success=validation_results["passed"],

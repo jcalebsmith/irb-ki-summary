@@ -8,13 +8,13 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from typing import Dict, Any, List, Optional
 from app.core.plugin_manager import DocumentPlugin, TemplateCatalog, ValidationRuleSet, TemplateSlot, SlotType
-from app.core.llm_integration import get_generic_extractor
-from app.core.multi_agent_system import BaseAgent, AgentRole, AgentContext
+from app.core.unified_extractor import UnifiedExtractor
+from app.core.agent_interfaces import BaseAgent, AgentRole, AgentContext
 from app.core.exceptions import ExtractionError
-from app.core.extraction_models import KIExtractionSchema
+from app.core.extraction_models import KIExtractionSchema, ExtractionReasoning, ReasoningStep
 from app.config import TEXT_PROCESSING
 # LLM validation is now integrated in extract_structured_with_validation
-from logger import get_logger
+from app.logger import get_logger
 
 # Set up module logger
 logger = get_logger("plugins.informed_consent")
@@ -179,11 +179,18 @@ class KIExtractionAgent(BaseAgent):
     
     def __init__(self):
         super().__init__("KIExtractionAgent", AgentRole.EXTRACTOR)
-        self.extractor = get_generic_extractor()
+        
+        # Initialize chain-of-thought extractor
+        try:
+            self.extractor = UnifiedExtractor()
+            logger.info("Unified extractor initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize chain-of-thought extraction: {e}")
+            raise
         
     async def process(self, agent_context: AgentContext) -> Dict[str, Any]:
         """
-        Process document with KI-specific extraction
+        Process document with KI-specific extraction using chain-of-thought
         """
         # Store context for base class
         self.context = agent_context
@@ -195,243 +202,104 @@ class KIExtractionAgent(BaseAgent):
         from app.core.utils import DocumentUtils
         document_context = DocumentUtils.extract_document_context(parameters)
         
-        # Build KI-specific extraction prompt with chain-of-thought and one-shot examples
-        system_prompt = (
-            "You are an expert at extracting key information from Informed Consent documents "
-            "for IRB Key Information summaries using a step-by-step approach.\n\n"
-            
-            "EXTRACTION PROCESS:\n"
-            "1. First, read the entire document carefully\n"
-            "2. For each field, think about where this information typically appears\n"
-            "3. Search for specific keywords and patterns\n"
-            "4. Extract the EXACT phrase from the document\n"
-            "5. Validate the extraction meets the requirements\n\n"
-            
-            "ONE-SHOT EXAMPLE:\n"
-            "Document excerpt: 'Your participation in this study will last approximately 12 months, "
-            "with monthly visits to the clinic.'\n"
-            "Extraction thought process:\n"
-            "  - Found 'will last' which indicates duration\n"
-            "  - The duration phrase is 'approximately 12 months'\n"
-            "  - Simplifying to core duration: '12 months'\n"
-            "Result: study_duration = '12 months'\n\n"
-            
-            "FIELD-SPECIFIC INSTRUCTIONS:\n\n"
-            
-            "For study_duration (CRITICAL FIELD):\n"
-            "  Step 1: Search for these patterns in order:\n"
-            "    - 'will last [duration]'\n"
-            "    - 'duration of [duration]'\n"
-            "    - 'participate for [duration]'\n"
-            "    - 'involvement will be [duration]'\n"
-            "    - 'study period is [duration]'\n"
-            "    - 'total of [number] visits over [duration]'\n"
-            "    - 'follow-up period of [duration]'\n"
-            "    - 'treatment period of [duration]'\n"
-            "    - 'approximately [duration]'\n"
-            "    - 'up to [duration]'\n"
-            "  Step 2: Extract the core duration (number + unit)\n"
-            "  Step 3: Return ONLY the duration, not the surrounding text\n"
-            "  Examples of CORRECT extractions:\n"
-            "    - '6 months'\n"
-            "    - 'up to 2 years'\n"
-            "    - '12 weeks'\n"
-            "    - '24 monthly visits'\n"
-            "  Examples of INCORRECT extractions:\n"
-            "    - 'the study period' (placeholder)\n"
-            "    - 'varies' (not specific)\n"
-            "    - 'not specified' (placeholder)\n"
-            "    - '' (correct if truly not found)\n\n"
-            
-            "For study_purpose:\n"
-            "  - Extract the main objective WITHOUT 'to' prefix\n"
-            "  - Will follow 'The purpose is to...'\n\n"
-            
-            "For study_goals:\n"
-            "  - Extract what the study will accomplish WITHOUT 'to' prefix\n"
-            "  - Will follow 'This study will...'\n\n"
-            
-            "VALIDATION RULES:\n"
-            "- NEVER invent information not in the document\n"
-            "- Return empty string if information is truly absent\n"
-            "- Extract EXACT phrases, preserve clinical terminology\n"
-        )
-        
-        # Try structured extraction with validation first
-        logger.info("Extracting KI-specific fields with semantic validation...")
         try:
-            # Use structured extraction with Pydantic model and validation
-            extraction, validation = await self.extractor.extract_structured_with_validation(
-                document_context=document_context[:TEXT_PROCESSING["extraction_context_limits"]["first_pass"]],
-                output_cls=KIExtractionSchema,
-                validate=True,
-                max_attempts=3
+            # Use simplified chain-of-thought extraction
+            logger.info("Using chain-of-thought extraction for KI document")
+            
+            # Extract all fields in a single call
+            extracted = await self.extractor.extract(
+                document=document_context,
+                output_schema=KIExtractionSchema
             )
             
-            # Log validation results
-            if validation:
-                logger.info(f"Extraction confidence: {validation.overall_confidence:.2%}")
-                if validation.requires_human_review:
-                    logger.warning("Extraction requires human review due to low confidence")
-                if validation.cross_field_issues:
-                    logger.warning(f"Cross-field issues: {validation.cross_field_issues}")
+            # Store extraction metadata
+            agent_context.metadata["extraction_method"] = "chain_of_thought"
             
-            # Convert Pydantic model to dict
-            extracted = extraction.model_dump()
+            # Convert Pydantic model to dict and store in context for downstream agents
+            extracted_dict = extracted.model_dump(mode='json')
+            agent_context.extracted_values.update(extracted_dict)
             
-            # Store validation metadata in context for downstream use
-            agent_context.metadata["validation_result"] = validation.to_dict() if validation else None
+            # Process extracted values into template slots for naturalization agent
+            slot_values = {}
+            
+            # Extract field mappings without defaults
+            slot_values["is_pediatric"] = extracted_dict.get("is_pediatric")
+            slot_values["study_type"] = extracted_dict.get("study_type")
+            slot_values["article"] = extracted_dict.get("article")
+            slot_values["study_object"] = extracted_dict.get("study_object")
+            slot_values["population"] = extracted_dict.get("population")
+            slot_values["study_purpose"] = extracted_dict.get("study_purpose")
+            slot_values["study_goals"] = extracted_dict.get("study_goals")
+            slot_values["key_risks"] = extracted_dict.get("key_risks")
+            slot_values["study_duration"] = extracted_dict.get("study_duration", "")  # Keep empty string for duration
+            
+            # Biospecimen statement
+            slot_values["biospecimen_statement"] = (
+                extracted_dict.get("biospecimen_details") or ""
+                if extracted_dict.get("collects_biospecimens") 
+                else ""
+            )
+            
+            # Generate benefit statement based on extraction
+            benefit_detail = extracted_dict.get("benefit_description")
+            if extracted_dict.get("has_direct_benefits"):
+                slot_values["benefit_statement"] = CONDITIONAL_TEMPLATES["benefits_personal"].format(
+                    benefit_detail=benefit_detail
+                )
+            else:
+                slot_values["benefit_statement"] = CONDITIONAL_TEMPLATES["benefits_others"].format(
+                    benefit_detail=benefit_detail
+                )
+            
+            # Randomization text
+            if extracted_dict.get("has_randomization"):
+                study_obj = (extracted_dict.get("study_object") or "").lower()
+                if "device" in study_obj:
+                    slot_values["randomization_text"] = CONDITIONAL_TEMPLATES["randomization_device"]
+                elif "procedure" in study_obj:
+                    slot_values["randomization_text"] = CONDITIONAL_TEMPLATES["randomization_procedure"]
+                else:
+                    slot_values["randomization_text"] = CONDITIONAL_TEMPLATES["randomization"]
+            else:
+                slot_values["randomization_text"] = ""
+            
+            # Alternatives
+            if extracted_dict.get("affects_treatment") and extracted_dict.get("alternative_options"):
+                slot_values["alternatives_sentence"] = CONDITIONAL_TEMPLATES["alternatives"].format(
+                    alternative_options=extracted_dict["alternative_options"]
+                )
+            else:
+                slot_values["alternatives_sentence"] = ""
+            
+            # Ensure critical template variables are set to prevent rendering errors
+            # Only set empty strings for fields that templates require
+            slot_values.setdefault("randomization_text", "")
+            slot_values.setdefault("washout_text", "")
+            slot_values.setdefault("benefit_statement", "")
+            slot_values.setdefault("study_duration", extracted_dict.get("study_duration", ""))
+            
+            # Handle washout text
+            if extracted_dict.get("requires_washout"):
+                slot_values["washout_text"] = "You may need to stop taking certain medications before joining this study. "
+            else:
+                slot_values["washout_text"] = ""
+            
+            # Store in generated_content for naturalization agent
+            agent_context.generated_content = slot_values
+            
+            return {
+                "status": "success",
+                "extracted": extracted_dict,
+                "extraction_method": "chain_of_thought"
+            }
             
         except Exception as e:
-            logger.warning(f"Structured extraction with validation failed: {e}")
-            logger.info("Falling back to JSON extraction...")
-            
-            # Fallback to JSON extraction
-            extracted = await self.extractor.extract_json(
-                document_context=document_context[:TEXT_PROCESSING["extraction_context_limits"]["first_pass"]],
-                extraction_schema=KI_EXTRACTION_SCHEMA,
-                system_prompt=system_prompt
-            )
-        
-        # Multi-step extraction: If critical fields are missing, try focused extraction
-        if not extracted.get("study_duration"):
-            logger.info("Study duration not found in first pass - attempting focused extraction")
-            
-            # Create a focused prompt specifically for duration
-            duration_prompt = (
-                "You are tasked with finding ONLY the study duration from this document.\n\n"
-                "CHAIN OF THOUGHT PROCESS:\n"
-                "1. First, scan for time-related sections (schedule, timeline, duration, visits)\n"
-                "2. Look for specific phrases:\n"
-                "   - 'The study will last...'\n"
-                "   - 'Your participation will be...'\n"
-                "   - 'You will be in the study for...'\n"
-                "   - 'Total duration...'\n"
-                "   - 'Follow-up period...'\n"
-                "   - 'Treatment period...'\n"
-                "   - Any mention of weeks, months, or years in context of participation\n"
-                "3. Extract the EXACT duration phrase\n\n"
-                "Return a JSON object with a single field 'study_duration' containing the exact duration "
-                "(e.g., '6 months', '12 weeks', 'up to 2 years') or empty string if not found.\n\n"
-                "IMPORTANT: Do not invent or guess. Only extract what is explicitly stated."
-            )
-            
-            # Try focused extraction on full document
-            duration_result = await self.extractor.extract_json(
-                document_context=document_context[:TEXT_PROCESSING["extraction_context_limits"]["second_pass"]],  # Even larger context for second pass
-                extraction_schema={"study_duration": KI_EXTRACTION_SCHEMA["study_duration"]},
-                system_prompt=duration_prompt
-            )
-            
-            if duration_result.get("study_duration"):
-                logger.info(f"Found duration in second pass: {duration_result['study_duration']}")
-                extracted["study_duration"] = duration_result["study_duration"]
-        
-        # Check if extraction failed
-        if "error" in extracted:
-            logger.error(f"Extraction failed: {extracted['error']}")
-            # Set empty values in context
-            agent_context.extracted_values = {}
-            agent_context.generated_content = {
-                "section1": "Unable to extract information",
-                "section2": "Unable to extract information",
-                "section3": "Unable to extract information",
-                "section4": "Unable to extract information",
-                "section5": "Unable to extract information",
-                "section6": "Unable to extract information",
-                "section7": "Unable to extract information",
-                "section8": "Unable to extract information",
-                "section9": "Unable to extract information"
+            logger.error(f"Chain-of-thought extraction failed: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "extraction_method": "chain_of_thought"
             }
-            return agent_context.generated_content
-        
-        # Process extracted values into template slots
-        slot_values = {}
-        
-        # Section 1: Use extracted pediatric flag
-        slot_values["is_pediatric"] = extracted.get("is_pediatric", False)
-        
-        from app.core.utils import DocumentUtils
-        
-        # Section 4: Direct mappings - use enum extraction utility
-        slot_values["study_type"] = DocumentUtils.extract_enum_value(extracted, "study_type", "studying")
-        slot_values["article"] = DocumentUtils.extract_enum_value(extracted, "article", "a ")
-        slot_values["study_object"] = extracted.get("study_object", "intervention")
-        slot_values["population"] = DocumentUtils.extract_enum_value(extracted, "population", "people")
-        
-        slot_values["study_purpose"] = extracted.get("study_purpose", "evaluate effectiveness")
-        slot_values["study_goals"] = extracted.get("study_goals", "gather data")
-        
-        # Simplified biospecimen statement
-        slot_values["biospecimen_statement"] = (
-            extracted.get("biospecimen_details", "") 
-            if extracted.get("collects_biospecimens") 
-            else ""
-        )
-        
-        # Section 5: Randomization text
-        if extracted.get("has_randomization"):
-            # Determine which randomization text based on study object
-            study_obj = extracted.get("study_object", "").lower()
-            if "device" in study_obj:
-                slot_values["randomization_text"] = CONDITIONAL_TEMPLATES["randomization_device"]
-            elif "procedure" in study_obj:
-                slot_values["randomization_text"] = CONDITIONAL_TEMPLATES["randomization_procedure"]
-            else:
-                slot_values["randomization_text"] = CONDITIONAL_TEMPLATES["randomization"]
-        else:
-            slot_values["randomization_text"] = ""
-        
-        # Washout text
-        if extracted.get("requires_washout"):
-            slot_values["washout_text"] = CONDITIONAL_TEMPLATES["washout"]
-        else:
-            slot_values["washout_text"] = ""
-        
-        # Section 6: Risks
-        slot_values["key_risks"] = extracted.get("key_risks", "standard medical risks")
-        
-        # Section 7: Benefits
-        benefit_detail = extracted.get("benefit_description", "helping advance medical knowledge")
-        if extracted.get("has_direct_benefits"):
-            slot_values["benefit_statement"] = CONDITIONAL_TEMPLATES["benefits_personal"].format(
-                benefit_detail=benefit_detail
-            )
-        else:
-            slot_values["benefit_statement"] = CONDITIONAL_TEMPLATES["benefits_others"].format(
-                benefit_detail=benefit_detail
-            )
-        
-        # Section 8: Duration - validate extraction quality
-        duration = extracted.get("study_duration", "")
-        
-        # Log extraction result for debugging
-        if duration:
-            logger.info(f"Extracted study_duration: '{duration}'")
-        else:
-            logger.warning("No study_duration extracted - may need multi-pass extraction")
-        
-        # Check for placeholder values that shouldn't be used
-        if duration and duration.lower() in ["the study period", "not specified", "unknown", "varies", "tbd"]:
-            logger.warning(f"Detected placeholder duration value: {duration} - clearing")
-            duration = ""
-        
-        slot_values["study_duration"] = duration
-        
-        # Section 9: Alternatives
-        if extracted.get("affects_treatment") and extracted.get("alternative_options"):
-            slot_values["alternatives_sentence"] = CONDITIONAL_TEMPLATES["alternatives"].format(
-                alternative_options=extracted["alternative_options"]
-            )
-        else:
-            slot_values["alternatives_sentence"] = ""
-        
-        # Update agent context with extracted values
-        agent_context.extracted_values = extracted
-        agent_context.generated_content = slot_values
-        
-        # Return the slot values for backward compatibility
-        return {"extracted_values": extracted, "generated_content": slot_values}
 
 
 class KINaturalizationAgent(BaseAgent):
@@ -439,12 +307,13 @@ class KINaturalizationAgent(BaseAgent):
 
     def __init__(self):
         super().__init__("KINaturalizationAgent", AgentRole.GENERATOR)
-        self.extractor = get_generic_extractor()
+        self.extractor = UnifiedExtractor()
 
     async def process(self, agent_context: AgentContext) -> Dict[str, Any]:
         self.context = agent_context
 
         extracted = agent_context.extracted_values or {}
+        # Start with existing generated content from _extract_template_values
         generated = agent_context.generated_content or {}
 
         document_context = ""
@@ -457,12 +326,17 @@ class KINaturalizationAgent(BaseAgent):
         elif 'document_text' in params:
             document_context = params['document_text']
 
-        # Build a prompt to naturalize slots. Preserve clinical terminology exactly as written.
+        # Build a prompt to naturalize slots with structured reasoning
         import json
         system_prompt = (
             "You refine extracted phrases so they fit into a Key Information template. "
+            "Provide your reasoning for each refinement to ensure accuracy. "
             "Preserve clinical terms exactly as written in the source. "
             "Return concise clauses that flow naturally when embedded in sentences. "
+            "\n\nReasoning approach:\n"
+            "1. For each field, explain why you're making specific changes\n"
+            "2. Note any clinical terms that must be preserved exactly\n"
+            "3. Explain how you're ensuring the text flows naturally\n\n"
             "Output STRICT JSON only, with the following keys, and no extra text.\n\n"
             "Rules per key:\n"
             "- study_purpose: concise clause, no leading 'to', no trailing punctuation.\n"
@@ -471,13 +345,15 @@ class KINaturalizationAgent(BaseAgent):
             "  use only if biospecimens are collected, otherwise return empty string.\n"
             "- study_duration: exact phrase from document (e.g., '6 months', 'up to 2 years'); "
             "  if not present, return empty string (do not invent).\n"
+            "- key_risks: main risks in a concise phrase (e.g., 'pain, bleeding, infection').\n"
+            "- benefit_description: describe benefits concisely.\n"
         )
 
         # Provide both doc context and the raw extracted values as source material.
         user_prompt = (
             "Document excerpt:\n" + (document_context[:6000] if document_context else "") +
             "\n\nExtracted values (JSON):\n" + json.dumps(extracted, ensure_ascii=False) +
-            "\n\nReturn JSON with keys: study_purpose, study_goals, biospecimen_statement, study_duration."
+            "\n\nReturn JSON with keys: study_purpose, study_goals, biospecimen_statement, study_duration, key_risks, benefit_description."
         )
 
         # Ask LLM to produce JSON
@@ -500,12 +376,18 @@ class KINaturalizationAgent(BaseAgent):
             polished = {}
 
         # Merge polished values back into generated slots, but only if non-empty
-        for key in ["study_purpose", "study_goals", "biospecimen_statement", "study_duration"]:
+        for key in ["study_purpose", "study_goals", "biospecimen_statement", "study_duration", "key_risks"]:
             val = polished.get(key)
             if isinstance(val, str):
                 sval = val.strip()
                 if sval:
                     generated[key] = sval
+        
+        # Map benefit_description to the already-generated benefit_statement if needed
+        if "benefit_description" in polished and polished["benefit_description"]:
+            # Don't override the formatted benefit_statement from conditional templates
+            if "benefit_statement" not in generated or not generated["benefit_statement"]:
+                generated["benefit_statement"] = polished["benefit_description"]
 
         # Enforce biospecimen presence constraint
         if not extracted.get("collects_biospecimens"):

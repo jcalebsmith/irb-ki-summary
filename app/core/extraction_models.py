@@ -3,9 +3,24 @@ Pydantic models for structured extraction
 Defines strongly-typed models for extracting information from documents
 """
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict, Any
 from enum import Enum
 import re
+
+
+class ReasoningStep(BaseModel):
+    """Represents a single step in chain-of-thought reasoning"""
+    field: str = Field(description="The field being extracted")
+    explanation: str = Field(description="Explanation of where we're looking and why")
+    evidence: Optional[str] = Field(default=None, description="Relevant text found in document")
+    interpretation: str = Field(description="How we interpret the evidence")
+    decision: Any = Field(description="Final value decided for this field")
+
+
+class ExtractionReasoning(BaseModel):
+    """Container for extraction reasoning steps"""
+    steps: List[ReasoningStep] = Field(default_factory=list, description="Chain-of-thought reasoning steps")
+    extraction: Optional[Dict[str, Any]] = Field(default=None, description="Final extracted values")
 
 
 class StudyType(str, Enum):
@@ -38,70 +53,58 @@ class KIExtractionSchema(BaseModel):
     """
     # Section 1 - Eligibility
     is_pediatric: bool = Field(
-        default=False,
         description="Are children eligible to participate? Look for age requirements, pediatric participants, or parent/guardian consent."
     )
     
     # Section 4 - Study Description  
     study_type: StudyType = Field(
-        default=StudyType.STUDYING,
         description="Is this study primarily studying/testing something or collecting/gathering something?"
     )
     
     article: ArticleType = Field(
-        default=ArticleType.A,
         description="What article should precede the study object? 'a ' for existing, 'a new ' for novel, '' for plural/uncountable"
     )
     
     study_object: str = Field(
-        default="intervention",
         max_length=150,
         description="Main object being studied (e.g., drug, device, procedure). Include FDA status if mentioned. Lowercase. Max 30 words."
     )
     
     population: PopulationType = Field(
-        default=PopulationType.PEOPLE,
         description="What population will participate?"
     )
     
     study_purpose: str = Field(
-        default="to evaluate effectiveness",
         max_length=100,
         description="Main purpose of study in 10-15 words. Simple language, no intro phrases."
     )
     
     study_goals: str = Field(
-        default="to gather data",
         max_length=100,
         description="What study will accomplish in 10-15 words. Simple language, direct statement."
     )
     
     # Section 5 - Randomization and Washout
     has_randomization: bool = Field(
-        default=False,
         description="Does document contain words 'randomize', 'randomization', or 'randomized'?"
     )
     
     requires_washout: bool = Field(
-        default=False,
         description="Does study require stopping medications before/during participation?"
     )
     
     # Section 6 - Risks
     key_risks: str = Field(
-        default="standard medical risks",
         max_length=150,
         description="2-3 most important risks from study (not standard care). Focus on pain/distress. 30 words max."
     )
     
     # Section 7 - Benefits
     has_direct_benefits: bool = Field(
-        default=False,
         description="Are there meaningful direct personal benefits to participants?"
     )
     
     benefit_description: str = Field(
-        default="helping advance medical knowledge",
         max_length=100,
         description="Benefits summary to complete 'by [text]'. Don't include 'by'. 20 words max."
     )
@@ -134,7 +137,6 @@ class KIExtractionSchema(BaseModel):
     
     # Section 9 - Alternatives
     affects_treatment: bool = Field(
-        default=False,
         description="Does participation affect current/future treatment options?"
     )
     
@@ -146,7 +148,6 @@ class KIExtractionSchema(BaseModel):
     
     # Additional fields
     collects_biospecimens: bool = Field(
-        default=False,
         description="Will biological specimens (blood, tissue, DNA, etc.) be collected?"
     )
     
