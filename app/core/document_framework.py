@@ -136,6 +136,7 @@ class DocumentGenerationFramework:
             
             # Step 2: Build context from document and parameters
             context = await self._build_context(parameters, document)
+            context["document_type"] = document_type
             
             # Store parameters for workflow tracking
             self._last_parameters = parameters
@@ -146,7 +147,7 @@ class DocumentGenerationFramework:
                 return self._create_error_result("Failed to resolve template")
             
             # Step 4: Run agent orchestration
-            agent_results = await self._run_agents(plugin, parameters)
+            agent_results = await self._run_agents(plugin, context)
             context = self._merge_agent_results(context, agent_results)
             self._last_context = context  # Store context for metadata extraction
             
@@ -201,7 +202,7 @@ class DocumentGenerationFramework:
         """Resolve the template path based on plugin and parameters."""
         return plugin.resolve_template(parameters)
     
-    async def _run_agents(self, plugin: Any, parameters: dict[str, Any]) -> dict[str, Any]:
+    async def _run_agents(self, plugin: Any, context: dict[str, Any]) -> dict[str, Any]:
         """Run multi-agent orchestration for document processing."""
         # Use plugin's specialized agents if available
         agents = plugin.get_specialized_agents()
@@ -210,8 +211,8 @@ class DocumentGenerationFramework:
             # Create AgentContext for plugin agents
             from app.core.agent_interfaces import AgentContext
             agent_context = AgentContext(
-                document_type=parameters.get("document_type", "informed-consent"),
-                parameters=parameters
+                document_type=context.get("document_type", "informed-consent"),
+                parameters=context
             )
             
             # Run each agent in sequence
@@ -233,17 +234,22 @@ class DocumentGenerationFramework:
             # Fallback to SimpleDocumentProcessor if no plugin agents
             from app.core.extraction_models import KIExtractionSchema
             output_schema = KIExtractionSchema
+            document_text = context.get("document_text")
+            if not document_text and "document" in context:
+                doc_obj = context["document"]
+                document_text = getattr(doc_obj, "text", str(doc_obj))
+            document_text = document_text or context.get("document_context", "")
             
-            context = await self.agent_pool.process(
-                document_text=parameters.get("document_context", ""),
+            processing_context = await self.agent_pool.process(
+                document_text=document_text,
                 document_type="informed-consent",
                 output_schema=output_schema
             )
             
             return {
-                "extracted_values": context.extracted_values,
-                "generated_content": context.generated_content,
-                "validation_results": context.validation_results
+                "extracted_values": processing_context.extracted_values,
+                "generated_content": processing_context.generated_content,
+                "validation_results": processing_context.validation_results
             }
     
     def _merge_agent_results(self, context: dict[str, Any], 

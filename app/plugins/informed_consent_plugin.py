@@ -2,6 +2,7 @@
 Informed Consent Key Information Summary Plugin
 Contains KI-specific extraction logic and templates
 """
+import re
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -18,6 +19,31 @@ from app.logger import get_logger
 
 # Set up module logger
 logger = get_logger("plugins.informed_consent")
+
+_TRAILING_CHARS = " .;:,!?\"'"
+
+
+def _normalize_clause(value: Optional[str], *, lower_leading: bool = False) -> str:
+    """Collapse whitespace, trim trailing punctuation, and optionally downcase the leading word."""
+    if not value:
+        return ""
+    cleaned = re.sub(r"\s+", " ", value.strip())
+    while cleaned and cleaned[-1] in _TRAILING_CHARS:
+        cleaned = cleaned[:-1]
+
+    if lower_leading and cleaned:
+        letter_match = re.search(r"[A-Za-z]", cleaned)
+        if letter_match:
+            idx = letter_match.start()
+            word_match = re.match(r"[A-Za-z][A-Za-z0-9'/-]*", cleaned[idx:])
+            if word_match:
+                word = word_match.group(0)
+                if not word.isupper():
+                    cleaned = (
+                        cleaned[:idx] + word[0].lower() + cleaned[idx + 1 :]
+                    )
+
+    return cleaned
 
 
 # KI-specific extraction schema
@@ -226,22 +252,37 @@ class KIExtractionAgent(BaseAgent):
             slot_values["is_pediatric"] = extracted_dict.get("is_pediatric")
             slot_values["study_type"] = extracted_dict.get("study_type")
             slot_values["article"] = extracted_dict.get("article")
-            slot_values["study_object"] = extracted_dict.get("study_object")
+            slot_values["study_object"] = _normalize_clause(extracted_dict.get("study_object"))
             slot_values["population"] = extracted_dict.get("population")
-            slot_values["study_purpose"] = extracted_dict.get("study_purpose")
-            slot_values["study_goals"] = extracted_dict.get("study_goals")
-            slot_values["key_risks"] = extracted_dict.get("key_risks")
-            slot_values["study_duration"] = extracted_dict.get("study_duration", "")  # Keep empty string for duration
+            slot_values["study_purpose"] = _normalize_clause(
+                extracted_dict.get("study_purpose"),
+                lower_leading=True,
+            )
+            slot_values["study_goals"] = _normalize_clause(
+                extracted_dict.get("study_goals"),
+                lower_leading=True,
+            )
+            slot_values["key_risks"] = _normalize_clause(
+                extracted_dict.get("key_risks"),
+                lower_leading=True,
+            )
+            slot_values["study_duration"] = _normalize_clause(extracted_dict.get("study_duration", ""))  # Keep empty string for duration
             
             # Biospecimen statement
             slot_values["biospecimen_statement"] = (
-                extracted_dict.get("biospecimen_details") or ""
+                _normalize_clause(
+                    extracted_dict.get("biospecimen_details"),
+                    lower_leading=True,
+                )
                 if extracted_dict.get("collects_biospecimens") 
                 else ""
             )
             
             # Generate benefit statement based on extraction
-            benefit_detail = extracted_dict.get("benefit_description")
+            benefit_detail = _normalize_clause(
+                extracted_dict.get("benefit_description"),
+                lower_leading=True,
+            )
             if extracted_dict.get("has_direct_benefits"):
                 slot_values["benefit_statement"] = CONDITIONAL_TEMPLATES["benefits_personal"].format(
                     benefit_detail=benefit_detail
@@ -265,8 +306,12 @@ class KIExtractionAgent(BaseAgent):
             
             # Alternatives
             if extracted_dict.get("affects_treatment") and extracted_dict.get("alternative_options"):
+                alternatives = _normalize_clause(
+                    extracted_dict["alternative_options"],
+                    lower_leading=True,
+                )
                 slot_values["alternatives_sentence"] = CONDITIONAL_TEMPLATES["alternatives"].format(
-                    alternative_options=extracted_dict["alternative_options"]
+                    alternative_options=alternatives
                 )
             else:
                 slot_values["alternatives_sentence"] = ""
@@ -276,7 +321,10 @@ class KIExtractionAgent(BaseAgent):
             slot_values.setdefault("randomization_text", "")
             slot_values.setdefault("washout_text", "")
             slot_values.setdefault("benefit_statement", "")
-            slot_values.setdefault("study_duration", extracted_dict.get("study_duration", ""))
+            slot_values.setdefault(
+                "study_duration",
+                _normalize_clause(extracted_dict.get("study_duration", "")),
+            )
             
             # Handle washout text
             if extracted_dict.get("requires_washout"):
@@ -376,18 +424,21 @@ class KINaturalizationAgent(BaseAgent):
             polished = {}
 
         # Merge polished values back into generated slots, but only if non-empty
+        lower_leading_keys = {"study_purpose", "study_goals", "biospecimen_statement", "key_risks"}
         for key in ["study_purpose", "study_goals", "biospecimen_statement", "study_duration", "key_risks"]:
             val = polished.get(key)
             if isinstance(val, str):
-                sval = val.strip()
+                sval = _normalize_clause(val, lower_leading=key in lower_leading_keys)
                 if sval:
                     generated[key] = sval
         
         # Map benefit_description to the already-generated benefit_statement if needed
-        if "benefit_description" in polished and polished["benefit_description"]:
+        benefit_description = polished.get("benefit_description")
+        if isinstance(benefit_description, str):
+            benefit_text = _normalize_clause(benefit_description, lower_leading=True)
             # Don't override the formatted benefit_statement from conditional templates
-            if "benefit_statement" not in generated or not generated["benefit_statement"]:
-                generated["benefit_statement"] = polished["benefit_description"]
+            if benefit_text and ("benefit_statement" not in generated or not generated["benefit_statement"]):
+                generated["benefit_statement"] = benefit_text
 
         # Enforce biospecimen presence constraint
         if not extracted.get("collects_biospecimens"):

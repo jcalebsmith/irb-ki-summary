@@ -75,13 +75,12 @@ class SimpleTemplateRenderer:
         """Flatten nested context for template access"""
         flat = dict(context)
         
-        # If generated_content exists, merge it into top level
-        if 'generated_content' in context and isinstance(context['generated_content'], dict):
-            flat.update(context['generated_content'])
-        
-        # If extracted_values exists, merge it too
+        # Merge extracted values first, then allow generated content to override
         if 'extracted_values' in context and isinstance(context['extracted_values'], dict):
             flat.update(context['extracted_values'])
+        
+        if 'generated_content' in context and isinstance(context['generated_content'], dict):
+            flat.update(context['generated_content'])
         
         return flat
     

@@ -1,4 +1,11 @@
 {# Section 4: Study Description #}
 Section 4
 
-This research is {{ study_type }} {{ article }}{{ study_object }} in {{ population }}. The purpose is to {{ study_purpose }}. This study will {{ study_goals }}. Your health-related information will be collected during this research. {{ biospecimen_statement }}
+This research is {{ study_type }} {{ article }}{{ study_object }} in {{ population }}.
+{% if study_purpose %}
+The purpose is to {{ study_purpose }}.
+{% endif %}
+{% if study_goals %}
+This study will {{ study_goals }}.
+{% endif %}
+Your health-related information will be collected during this research.{% if biospecimen_statement %} Biospecimens collected include {{ biospecimen_statement }}.{% endif %}

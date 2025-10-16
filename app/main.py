@@ -11,6 +11,7 @@ from .pdf import read_pdf
 from .core.document_framework import DocumentGenerationFramework
 from .core.exceptions import DocumentFrameworkError, PDFProcessingError
 from .core.document_models import Document
+from .core.section_parser import parse_ki_sections
 
 
 def convert_section(text):
@@ -84,28 +85,16 @@ async def create_upload_file(file: UploadFile):
     )
     
     if result.success:
-        # Parse sections from content for compatibility
-        sections = []
-        texts = []
-        
-        if "Section" in result.content:
-            section_parts = result.content.split("\n\nSection ")
-            for i, part in enumerate(section_parts):
-                if part.strip():
-                    if i == 0 and not part.startswith("Section"):
-                        # Skip header if present
-                        continue
-                    lines = part.split("\n", 1)
-                    if len(lines) > 0:
-                        section_num = lines[0].strip() if i > 0 else part.split("\n")[0].replace("Section ", "").strip()
-                        section_text = lines[1].strip() if len(lines) > 1 else ""
-                        sections.append(f"Section {section_num}")
-                        texts.append(section_text)
-        
-        # Add total summary
-        sections.append("Total Summary")
-        texts.append("\n\n".join(texts))
-        
+        parsed_sections = parse_ki_sections(result.content)
+        if parsed_sections:
+            sections = [section.title for section in parsed_sections]
+            texts = [section.body for section in parsed_sections]
+            summary_text = "\n\n".join(texts)
+            sections.append("Total Summary")
+            texts.append(summary_text)
+        else:
+            sections = ["Total Summary"]
+            texts = [result.content.strip()]
         return {"sections": sections, "texts": texts}
     else:
         # Return error in expected format
@@ -166,34 +155,24 @@ async def generate_document(
         )
         
         if result.success:
-            sections = []
-            texts = []
-            
-            # Parse sections based on plugin type
             if plugin_id == "informed-consent-ki":
-                # KI summary format with 9 sections
-                if "Section" in result.content:
-                    section_parts = result.content.split("\n\nSection ")
-                    for i, part in enumerate(section_parts):
-                        if part.strip():
-                            if i == 0 and not part.startswith("Section"):
-                                continue
-                            lines = part.split("\n", 1)
-                            if len(lines) > 0:
-                                section_num = lines[0].strip() if i > 0 else part.split("\n")[0].replace("Section ", "").strip()
-                                section_text = lines[1].strip() if len(lines) > 1 else ""
-                                sections.append(f"Section {section_num}")
-                                texts.append(section_text)
-                    
-                    # Add total summary for KI
+                parsed_sections = parse_ki_sections(result.content)
+                if parsed_sections:
+                    sections = [section.title for section in parsed_sections]
+                    texts = [section.body for section in parsed_sections]
+                    summary_text = "\n\n".join(texts)
                     sections.append("Total Summary")
-                    texts.append("\n\n".join(texts))
+                    texts.append(summary_text)
+                else:
+                    sections = ["Total Summary"]
+                    texts = [result.content.strip()]
             else:
-                # Generic parsing for other document types
+                sections: List[str] = []
+                texts: List[str] = []
                 if "\n## " in result.content:
                     # Parse markdown sections
                     content_sections = result.content.split("\n## ")
-                    for i, section in enumerate(content_sections):
+                    for section in content_sections:
                         if section.strip():
                             lines = section.split("\n", 1)
                             if len(lines) > 0:
@@ -203,9 +182,9 @@ async def generate_document(
                                 texts.append(section_content)
                 else:
                     # Return as single section
-                    sections.append(document_type.replace("-", " ").title())
+                    sections.append(plugin_id.replace("-", " ").title())
                     texts.append(result.content)
-            
+
             return {
                 "sections": sections,
                 "texts": texts,

@@ -12,6 +12,7 @@ import json
 from app.pdf import read_pdf
 from app.core.document_framework import DocumentGenerationFramework
 from app.core.document_models import Document
+from app.core.section_parser import parse_ki_sections
 from app.config import get_cors_origins
 from app.logger import get_logger
 
@@ -217,19 +218,11 @@ def _extract_pdf_text(contents: bytes) -> str:
 
 def _parse_sections(content: str, plugin_id: str) -> Optional[Dict[str, str]]:
     """Parse content into sections if structured"""
-    sections = {}
-    
-    if plugin_id == "informed-consent-ki" and "Section" in content:
-        # Parse numbered sections for KI summary
-        parts = content.split("\n\nSection ")
-        for i, part in enumerate(parts):
-            if part.strip():
-                lines = part.split("\n", 1)
-                if len(lines) > 0:
-                    if i == 0 and not part.startswith("Section"):
-                        continue
-                    section_num = lines[0].strip().replace("Section ", "")
-                    section_text = lines[1].strip() if len(lines) > 1 else ""
-                    sections[f"section_{section_num}"] = section_text
-    
-    return sections if sections else None
+    if plugin_id != "informed-consent-ki":
+        return None
+
+    parsed_sections = parse_ki_sections(content)
+    if not parsed_sections:
+        return None
+
+    return {f"section_{section.index}": section.body for section in parsed_sections}

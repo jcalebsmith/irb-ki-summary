@@ -9,6 +9,7 @@ import io
 from .pdf import read_pdf
 from .core.document_framework import DocumentGenerationFramework
 from .core.document_models import Document
+from .core.section_parser import parse_ki_sections
 
 
 def generate_summary(file_path: Any) -> Dict[str, str]:
@@ -56,23 +57,9 @@ def generate_summary(file_path: Any) -> Dict[str, str]:
     
     if result.success:
         # Parse sections from generated content
-        if "Section" in result.content:
-            section_parts = result.content.split("\n\nSection ")
-            section_num = 1
-            
-            for i, part in enumerate(section_parts):
-                if part.strip():
-                    if i == 0 and not part.startswith("Section"):
-                        continue
-                    
-                    lines = part.split("\n", 1)
-                    if len(lines) > 1:
-                        section_text = lines[1].strip()
-                    else:
-                        section_text = part.strip()
-                    
-                    response[f"section{section_num}"] = section_text
-                    section_num += 1
+        parsed_sections = parse_ki_sections(result.content)
+        for section in parsed_sections:
+            response[f"section{section.index}"] = section.body
         
         # Ensure all 9 sections exist
         for i in range(1, 10):
