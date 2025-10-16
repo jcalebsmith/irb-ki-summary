@@ -14,7 +14,6 @@ from app.core.agent_interfaces import BaseAgent, AgentRole, AgentContext
 from app.core.exceptions import ExtractionError
 from app.core.extraction_models import KIExtractionSchema, ExtractionReasoning, ReasoningStep
 from app.config import TEXT_PROCESSING
-# LLM validation is now integrated in extract_structured_with_validation
 from app.logger import get_logger
 
 # Set up module logger
