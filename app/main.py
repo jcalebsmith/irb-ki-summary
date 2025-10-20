@@ -12,6 +12,7 @@ from .core.document_framework import DocumentGenerationFramework
 from .core.exceptions import DocumentFrameworkError, PDFProcessingError
 from .core.document_models import Document
 from .core.section_parser import parse_ki_sections
+from .config import AppConfig
 
 
 def convert_section(text):
@@ -24,12 +25,13 @@ def convert_section(text):
 
 app = FastAPI()
 
+# Configure CORS using centralized AppConfig
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Restricted to specific origins for security
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_origins=AppConfig.CORS_ORIGINS,
+    allow_credentials=AppConfig.CORS_CREDENTIALS,
+    allow_methods=AppConfig.CORS_METHODS,
+    allow_headers=AppConfig.CORS_HEADERS,
 )
 
 @app.get("/")
@@ -263,5 +265,58 @@ async def get_plugin_info(plugin_id: str):
                 "parameters": "Optional JSON parameters"
             }
         }
+    }
+
+
+@app.get("/health/")
+async def health_check():
+    """
+    Health check endpoint for monitoring and load balancers.
+
+    Returns basic health status and system information.
+    """
+    from datetime import datetime
+    from .core.monitoring import get_system_metrics
+
+    try:
+        # Check if framework is initialized
+        framework_healthy = framework is not None
+
+        # Get system metrics
+        system_metrics = get_system_metrics()
+
+        return {
+            "status": "healthy" if framework_healthy else "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+            "components": {
+                "framework": "healthy" if framework_healthy else "unavailable",
+                "system": "healthy" if system_metrics.get("cpu_percent", 100) < 90 else "degraded"
+            },
+            "system": system_metrics
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }
+
+
+@app.get("/metrics/")
+async def get_metrics():
+    """
+    Performance metrics endpoint.
+
+    Returns application and system metrics for monitoring.
+    """
+    from datetime import datetime
+    from .core.monitoring import get_monitor, get_system_metrics
+
+    monitor = get_monitor()
+
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "application": monitor.get_metrics(),
+        "system": get_system_metrics()
     }
 

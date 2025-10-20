@@ -3,10 +3,7 @@ Informed Consent Key Information Summary Plugin
 Contains KI-specific extraction logic and templates
 """
 import re
-import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from typing import Dict, Any, List, Optional
 from app.core.plugin_manager import DocumentPlugin, TemplateCatalog, ValidationRuleSet, TemplateSlot, SlotType
 from app.core.unified_extractor import UnifiedExtractor

@@ -10,6 +10,9 @@ import importlib.util
 import inspect
 from enum import Enum
 from .exceptions import PluginLoadError, PluginNotFoundError
+from app.logger import get_logger
+
+logger = get_logger("core.plugin_manager")
 
 
 class SlotType(Enum):
@@ -147,12 +150,12 @@ class PluginManager:
                             
                             self.plugin_registry[plugin_id] = obj
                             self.plugins[plugin_id] = plugin_instance
-                            
-                            print(f"Discovered plugin: {plugin_id} from {plugin_file.name}")
+
+                            logger.info(f"Discovered plugin: {plugin_id} from {plugin_file.name}")
             
             except Exception as e:
                 # Log error but don't fail the entire loading process
-                print(f"Warning: Could not load plugin from {plugin_file}: {e}")
+                logger.warning(f"Could not load plugin from {plugin_file}: {e}")
                 # Continue loading other plugins
     
     def get_plugin(self, document_type: str) -> Optional[DocumentPlugin]:

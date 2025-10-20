@@ -40,7 +40,8 @@ def main():
                     age = datetime.now() - last_time
                     if age > timedelta(days=7):
                         messages.append(f"⚠️  Graph is {age.days} days old - consider refreshing")
-                except:
+                except (ValueError, TypeError) as e:
+                    # Ignore invalid datetime formats
                     pass
             
             # Show some useful stats
@@ -63,10 +64,11 @@ def main():
                         # Try to get relevant context from graph
                         keywords = task_name.split('-')
                         context = kg.get_context_for_task(keywords)
-                        
+
                         if context.get("direct_matches"):
                             messages.append(f"\n🎯 Found {len(context['direct_matches'])} relevant files for task: {task_name}")
-            except:
+            except Exception as e:
+                # Ignore errors reading task context
                 pass
         
         # Print messages

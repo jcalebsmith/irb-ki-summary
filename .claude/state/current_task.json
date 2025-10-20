@@ -1,6 +1,6 @@
 {
-  "task": null,
-  "branch": null,
-  "services": [],
-  "updated": "2025-09-09"
+  "task": "h-refactor-address-technical-debt",
+  "branch": "feature/refactor-address-technical-debt",
+  "services": ["app/core", "app/plugins", "app/hooks", "app/main"],
+  "updated": "2025-10-20"
 }

@@ -95,6 +95,20 @@ PLUGIN_CONFIG = {
     "auto_discover": True
 }
 
+# Monitoring configuration
+MONITORING_CONFIG = {
+    "enabled": os.getenv("MONITORING_ENABLED", "true").lower() == "true",
+    "metrics_endpoint": "/metrics/",
+    "health_endpoint": "/health/"
+}
+
+# Cache configuration
+CACHE_CONFIG = {
+    "enabled": os.getenv("LLM_CACHE_ENABLED", "true").lower() == "true",
+    "ttl_seconds": int(os.getenv("LLM_CACHE_TTL", "3600")),  # 1 hour
+    "max_size": int(os.getenv("LLM_CACHE_MAX_SIZE", "1000"))
+}
+
 
 def get_azure_config() -> Dict[str, Any]:
     """Get Azure OpenAI configuration"""
@@ -156,6 +170,43 @@ def validate_config() -> bool:
     return True
 
 
+class AppConfig:
+    """Centralized application configuration."""
+
+    # Server
+    HOST = os.getenv("HOST", "127.0.0.1")
+    PORT = int(os.getenv("PORT", "8000"))
+
+    # CORS
+    CORS_ORIGINS = API_CONFIG["cors_origins"]
+    CORS_CREDENTIALS = os.getenv("CORS_CREDENTIALS", "true").lower() == "true"
+    CORS_HEADERS = ["*"]
+    CORS_METHODS = ["*"]
+
+    # Logging
+    LOG_LEVEL = LOGGING_CONFIG["level"]
+    LOG_FILE = LOGGING_CONFIG["file"]
+
+    # Document Processing
+    MAX_PDF_SIZE_MB = int(os.getenv("MAX_PDF_SIZE_MB", "10"))
+    PROCESSING_TIMEOUT = int(os.getenv("PROCESSING_TIMEOUT", "60"))
+
+    # Azure OpenAI
+    AZURE_CONFIG = AZURE_OPENAI_CONFIG
+
+    # Paths
+    BASE_DIR = BASE_DIR
+    APP_DIR = APP_DIR
+    TEST_DATA_DIR = TEST_DATA_DIR
+    TEMPLATE_DIR = get_template_dir()
+    PLUGIN_DIR = get_plugin_dir()
+
+    @classmethod
+    def validate(cls):
+        """Validate configuration on startup."""
+        return validate_config()
+
+
 # Export commonly used values directly
 __all__ = [
     'BASE_DIR',
@@ -169,6 +220,9 @@ __all__ = [
     'TEST_CONFIG',
     'TEMPLATE_CONFIG',
     'PLUGIN_CONFIG',
+    'MONITORING_CONFIG',
+    'CACHE_CONFIG',
+    'AppConfig',
     'get_azure_config',
     'get_cors_origins',
     'get_test_pdf_path',
