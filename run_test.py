@@ -148,8 +148,7 @@ def main() -> None:
         print(f"{'='*60}")
 
     # Import ConsistencyTracker for multi-run analysis
-    sys.path.insert(0, str(Path(__file__).parent / "app"))
-    from core.validators import ConsistencyTracker
+    from app.core.validators import ConsistencyTracker
 
     tracker = ConsistencyTracker()
     responses: List[Dict[str, Any]] = []

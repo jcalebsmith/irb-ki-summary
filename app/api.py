@@ -13,7 +13,7 @@ from app.pdf import read_pdf
 from app.core.document_framework import DocumentGenerationFramework
 from app.core.document_models import Document
 from app.core.section_parser import parse_ki_sections
-from app.config import get_cors_origins
+from app.config import AppConfig
 from app.logger import get_logger
 
 logger = get_logger("api")
@@ -24,13 +24,13 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Configure CORS from config
+# Configure CORS using centralized AppConfig
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_cors_origins(),
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_origins=AppConfig.CORS_ORIGINS,
+    allow_credentials=AppConfig.CORS_CREDENTIALS,
+    allow_methods=AppConfig.CORS_METHODS,
+    allow_headers=AppConfig.CORS_HEADERS,
 )
 
 # Initialize framework once

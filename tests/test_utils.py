@@ -32,20 +32,14 @@ def setup_test_logging(name: str = __name__) -> logging.Logger:
 
 def setup_test_paths():
     """
-    Set up Python path for test imports.
-    
+    Get test directory paths.
+
     Returns:
         Tuple of (ROOT_DIR, APP_DIR) paths
     """
     ROOT_DIR = Path(__file__).parent.parent
     APP_DIR = ROOT_DIR / "app"
-    
-    # Add to sys.path if not already present
-    if str(APP_DIR) not in sys.path:
-        sys.path.append(str(APP_DIR))
-    if str(ROOT_DIR) not in sys.path:
-        sys.path.append(str(ROOT_DIR))
-    
+
     return ROOT_DIR, APP_DIR
 
 

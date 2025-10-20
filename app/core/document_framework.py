@@ -9,8 +9,6 @@ import re
 import hashlib
 from collections import defaultdict
 import numpy as np
-import sys
-sys.path.append(str(Path(__file__).parent.parent))
 from app.logger import get_logger
 
 from .plugin_manager import PluginManager, ValidationRuleSet

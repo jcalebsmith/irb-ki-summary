@@ -1,0 +1,181 @@
+================================================================================
+TECHNICAL DEBT ANALYSIS - EXECUTIVE SUMMARY
+IRB KI Summary Application
+Analysis Date: 2025-10-20
+================================================================================
+
+HEALTH SCORE: 6.2/10 (Moderate Debt Burden)
+
+================================================================================
+CRITICAL FINDINGS (Address Immediately)
+================================================================================
+
+1. BARE EXCEPT CLAUSES - 8 instances across codebase
+   Files: .claude/hooks/*.py (7), app/api.py (1)
+   Risk: Silent failures, unhandled system signals, debugging difficulty
+   Effort: 2 hours
+   Action: Replace with specific exception types
+
+2. SILENT ERROR HANDLING - 3 locations
+   Files: document_processor.py, unified_extractor.py, informed_consent_plugin.py
+   Risk: Cascading failures, empty data propagation
+   Effort: 1 hour
+   Action: Log full details, add error propagation
+
+3. DEBUG PRINT STATEMENTS - 4 instances in production code
+   Files: document_framework.py (2), plugin_manager.py (2)
+   Risk: Uncontrolled logging, performance impact
+   Effort: 0.5 hours
+   Action: Replace with logger calls
+
+================================================================================
+HIGH PRIORITY ISSUES
+================================================================================
+
+1. SYSTEM PATH MANIPULATION (Anti-pattern)
+   Location: 3 files (document_framework.py, 2 plugins)
+   Risk: Module isolation broken, deployment fragility
+   Effort: 3 hours
+   Action: Remove sys.path, use proper Python packaging
+
+2. HARDCODED VALUES
+   Location: main.py line 29 (hardcoded CORS origins)
+   Risk: Configuration inconsistency
+   Effort: 1 hour
+   Action: Use centralized config like api.py does
+
+3. UNUSED/DEAD CODE
+   - deprecated clear_template_cache() method (document_framework.py)
+   - RAG pipeline references (never implemented)
+   - RAGPipelineError exception (never raised)
+   Effort: 1 hour
+   Action: Remove completely
+
+4. TIGHT COUPLING BETWEEN MODULES
+   Risk: Circular dependency risk, difficult testing
+   Effort: 4 hours
+   Action: Introduce dependency injection
+
+================================================================================
+MEDIUM PRIORITY ISSUES
+================================================================================
+
+1. MISSING TEST COVERAGE
+   Current: 6 test files for 25 app modules (24% ratio)
+   Target: 80% code coverage
+   Missing: Tests for validators, plugin_manager, llm_client, unified_extractor
+   Effort: 16 hours
+   Action: Add unit tests for all core modules
+
+2. INCONSISTENT TYPE HINTS
+   Issue: Mix of old-style (Dict[str, Any]) and new-style (dict[str, Any])
+   Effort: 2 hours
+   Action: Standardize on one style per Python version
+
+3. MONOLITHIC VALIDATOR CLASSES
+   Issue: ValidationOrchestrator has multiple responsibilities
+   Effort: 4 hours
+   Action: Further decompose using composition pattern
+
+4. DOCUMENTATION GAPS
+   Issue: Some modules have poor docstrings
+   Effort: 2 hours
+   Action: Add comprehensive docstrings
+
+================================================================================
+QUICK WINS (Low Effort, High Value)
+================================================================================
+
+1. Replace print() with logger calls (0.5 hours)
+2. Fix bare except clauses (1 hour)  
+3. Remove unused RAG references (0.5 hours)
+4. Fix hardcoded CORS configuration (0.5 hours)
+Total: 2.5 hours for significant improvement
+
+================================================================================
+LONG-TERM IMPROVEMENTS (High Value)
+================================================================================
+
+1. Proper Python packaging (remove sys.path hacks)
+2. Increase test coverage to 80%
+3. Refactor for loose coupling
+4. Standardize error handling patterns
+5. Consolidate FastAPI initialization
+
+================================================================================
+ISSUE BREAKDOWN BY CATEGORY
+================================================================================
+
+Category                 Critical  High  Medium  Low   TOTAL
+─────────────────────────────────────────────────────────────
+Error Handling               2      2      1      0     5
+Code Quality                 0      3      2      3     8
+Architecture                 0      2      3      1     6
+Configuration                0      1      1      1     3
+Testing                       0      0      1      0     1
+Documentation                0      0      2      1     3
+Performance                  0      0      1      2     3
+Type Hints                    0      0      2      1     3
+Logging                       0      0      1      1     2
+Modularity                    0      0      2      1     3
+─────────────────────────────────────────────────────────────
+TOTAL                        2      8      16     11    37
+
+================================================================================
+ESTIMATED REMEDIATION ROADMAP
+================================================================================
+
+Immediate (1-2 weeks): 4.5 hours
+- Fix bare except clauses
+- Replace print() with logger
+- Remove dead code
+
+Near-term (1 month): 6.5 hours
+- Fix sys.path manipulation
+- Fix hardcoded config
+- Add basic test coverage
+
+Medium-term (1-2 months): 12+ hours
+- Add comprehensive test coverage
+- Refactor coupling issues
+- Complete type hint migration
+
+Long-term (quarterly): 8+ hours
+- Full architectural refactor
+- Complete documentation
+- Performance optimization
+
+TOTAL ESTIMATED EFFORT: 25-30 hours
+
+================================================================================
+RISK ASSESSMENT
+================================================================================
+
+Current State Risk: MEDIUM
+- Bare exceptions could cause production outages
+- Missing error handling masks real issues
+- Low test coverage increases regression risk
+
+Predicted Risk if Not Addressed: HIGH
+- Silent failures difficult to debug
+- Refactoring becomes extremely risky
+- Technical debt compounds over time
+
+Time Until Critical: 2-3 months
+- Recommended to address critical items ASAP
+- Quick wins (2.5 hours) provide significant value
+
+================================================================================
+DETAILED REPORT
+================================================================================
+
+Full analysis available in: TECHNICAL_DEBT_ANALYSIS.md
+
+This file contains:
+- Detailed issue descriptions with code examples
+- Line-by-line references
+- Recommended fixes
+- Priority remediation table
+- Supporting rationale
+
+================================================================================
