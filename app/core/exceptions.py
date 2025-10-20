@@ -124,7 +124,7 @@ class ConfigurationError(DocumentFrameworkError):
 
 class PDFProcessingError(DocumentFrameworkError):
     """Raised when PDF processing fails."""
-    
+
     def __init__(self, filename: str, message: str, page: Optional[int] = None):
         details = {"filename": filename}
         if page is not None:
@@ -134,3 +134,24 @@ class PDFProcessingError(DocumentFrameworkError):
         self.page = page
 
 
+class DocumentProcessingError(DocumentFrameworkError):
+    """Raised when document processing fails."""
+    pass
+
+
+class ExtractionError(DocumentProcessingError):
+    """Raised when data extraction fails."""
+
+    def __init__(self, message: str, details: Optional[dict[str, Any]] = None):
+        super().__init__(f"Extraction failed: {message}", details)
+
+
+class PluginExecutionError(DocumentFrameworkError):
+    """Raised when plugin execution fails."""
+
+    def __init__(self, plugin_id: str, message: str, details: Optional[dict[str, Any]] = None):
+        if details is None:
+            details = {}
+        details["plugin_id"] = plugin_id
+        super().__init__(f"Plugin '{plugin_id}' failed: {message}", details)
+        self.plugin_id = plugin_id

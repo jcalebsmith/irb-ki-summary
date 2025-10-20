@@ -21,7 +21,8 @@ from .exceptions import (
     DocumentFrameworkError,
     PluginNotFoundError,
     TemplateError,
-    ValidationError
+    ValidationError,
+    PluginExecutionError
 )
 from .types import (
     ValidationResult, ValidationConstants, ProcessingConstants,
@@ -151,7 +152,16 @@ class DocumentGenerationFramework:
             rendered_content = await self._render_template(
                 template_path, context
             )
-            
+
+            # Validate rendered content
+            if not rendered_content or len(rendered_content.strip()) < 100:
+                logger.error(f"Generated content too short: {len(rendered_content) if rendered_content else 0} chars")
+                raise PluginExecutionError(
+                    document_type,
+                    "Generated content is empty or too short",
+                    {"content_length": len(rendered_content) if rendered_content else 0}
+                )
+
             # Step 6: Validate results
             validation_results = await self._validate_output(
                 plugin, context, rendered_content

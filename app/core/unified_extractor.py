@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from app.config import AZURE_OPENAI_CONFIG
 from app.core.extraction_models import KIExtractionSchema
+from app.core.exceptions import ExtractionError
 from app.logger import get_logger
 from openai import AsyncAzureOpenAI
 
@@ -348,8 +349,12 @@ class UnifiedExtractor:
                 blob = after_marker.split(terminator, 1)[0] if terminator in after_marker else after_marker
                 try:
                     values = json.loads(blob)
-                except json.JSONDecodeError:
-                    values = {}
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse extraction JSON: {e}")
+                    raise ExtractionError(
+                        "Invalid JSON in extraction response",
+                        {"json_snippet": blob[:200]}
+                    ) from e
             return json.dumps(_offline_polished_values(values))
 
         messages = []

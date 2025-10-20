@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from app.core.unified_extractor import UnifiedExtractor
 from app.core.validators import ValidationOrchestrator
+from app.core.exceptions import ExtractionError
 from app.logger import get_logger
 
 logger = get_logger("core.document_processor")
@@ -75,7 +76,7 @@ class SimpleDocumentProcessor:
                 document=document_text,
                 output_schema=output_schema
             )
-            
+
             # Convert to dict if needed
             if hasattr(extracted, 'model_dump'):
                 context.extracted_values = extracted.model_dump(mode='json')
@@ -83,12 +84,26 @@ class SimpleDocumentProcessor:
                 context.extracted_values = extracted.dict()
             else:
                 context.extracted_values = extracted
-                
+
+            # Validate extraction results
+            if not context.extracted_values:
+                logger.error("Extraction returned empty results")
+                raise ExtractionError(
+                    "No data could be extracted from document",
+                    {"document_length": len(document_text), "document_type": document_type}
+                )
+
             logger.info(f"Extracted {len(context.extracted_values)} fields")
-            
+
+        except ExtractionError:
+            # Re-raise extraction errors
+            raise
         except Exception as e:
-            logger.error(f"Extraction failed: {e}")
-            context.extracted_values = {}
+            logger.error(f"Extraction failed: {e}", exc_info=True)
+            raise ExtractionError(
+                str(e),
+                {"document_type": document_type, "error_type": type(e).__name__}
+            ) from e
         
         # Step 2: Generate content if LLM available
         if self.llm_client and context.extracted_values:
