@@ -1,0 +1,356 @@
+{
+  "test_metadata": {
+    "pdf_file": "test_data/HUM00173014.pdf",
+    "plugin_id": "informed-consent-ki",
+    "template_id": null,
+    "repeat_count": 10,
+    "timestamp": "2025-10-20 09:08:23"
+  },
+  "consistency_metrics": {
+    "overall_metrics": {
+      "mean_cv": 0.5483314336141626,
+      "meets_target": true
+    },
+    "by_document_type": {
+      "informed-consent-ki": {
+        "runs": 10,
+        "cv": 0.5483314336141626,
+        "structural_consistency": 0.19999999999999996,
+        "mean_word_count": 929.2,
+        "unique_outputs": 9
+      }
+    }
+  },
+  "all_responses": [
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for multiple myeloma treatment.\nThis study will evaluate impact of combination therapy on minimal residual disease.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for multiple myeloma treatment.\nThis study will evaluate impact of combination therapy on minimal residual disease.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include bone marrow biopsy pain, infusion-related reactions, severe infections. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include bone marrow biopsy pain, infusion-related reactions, severe infections. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment outcomes. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include bone marrow aspirate samples.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include blood and bone marrow aspirate samples.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include blood and bone marrow aspirate samples.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    },
+    {
+      "sections": [
+        "Section 1",
+        "Section 2",
+        "Section 3",
+        "Section 4",
+        "Section 5",
+        "Section 6",
+        "Section 7",
+        "Section 8",
+        "Section 9",
+        "Total Summary"
+      ],
+      "texts": [
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.",
+        "A research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.",
+        "Research studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.",
+        "This research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include blood and bone marrow aspirate samples.",
+        "",
+        "There can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.",
+        "This study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.",
+        "The study will take up to 60 months.",
+        "You can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind.",
+        "You may be eligible to take part in a research study. This form contains important information that will help you decide whether to join the study. Take the time to carefully review this information. You should talk to the researchers about the study and ask them any questions you have. You may also wish to talk to others such as your family, friends, or other doctors about joining this study. If you decide to join the study, you will be asked to sign this form before you can start study-related activities. Before you do, be sure you understand what the research study is about.\n\nA research study is different from the regular medical care you receive from your doctor. Research studies hope to make discoveries and learn new information about diseases and how to treat them. You should consider the reasons why you might want to join a research study or why it is not the best decision for you at this time.\n\nResearch studies do not always offer the possibility of treating your disease or condition. Research studies also have different kinds of risks and risk levels, depending on the type of the study. You may also need to think about other requirements for being in the study. For example, some studies require you to travel to scheduled visits at the study site in Ann Arbor or elsewhere. This may require you to arrange travel, change work schedules, find child care, or make other plans. In your decision to participate in this study, consider all of these matters carefully.\n\nThis research is studying a combination therapy of daratumumab, lenalidomide, bortezomib, and dexamethasone (investigational) in small numbers of people.\nThe purpose is to test combination therapy for newly diagnosed multiple myeloma patients.\nThis study will evaluate treatment impact on minimal residual disease status.\nYour health-related information will be collected during this research. Biospecimens collected include blood and bone marrow aspirate samples.\n\n\n\nThere can be risks associated with joining any research study. The type of risk may impact whether you decide to join the study. For this study, some of these risks may include infusion-related reactions, severe infections, and bone marrow biopsy discomfort. More detailed information will be provided later in this document.\n\nThis study may not offer any benefit to you now but may benefit others in the future by advancing knowledge of multiple myeloma treatment strategies. More information will be provided later in this document.\n\nThe study will take up to 60 months.\n\nYou can decide not to be in this study. Alternatives to joining this study include chemotherapy, biologic therapies, radiation, or stem cell transplantation.\n\nEven if you decide to join the study now, you are free to leave at any time if you change your mind."
+      ],
+      "metadata": {
+        "plugin_id": "informed-consent-ki",
+        "template_used": "informed-consent/ki-summary.j2",
+        "document_type": "informed-consent-ki",
+        "chunking_method": "SPLICE",
+        "agents_used": 2
+      }
+    }
+  ]
+}

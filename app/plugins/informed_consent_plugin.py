@@ -409,7 +409,7 @@ class KINaturalizationAgent(BaseAgent):
                 prompt=user_prompt,
                 system_prompt=system_prompt,
                 max_tokens=400,
-                temperature=0.1
+                temperature=0
             )
             # Parse JSON from response
             try:
