@@ -95,6 +95,20 @@ PLUGIN_CONFIG = {
     "auto_discover": True
 }
 
+# Monitoring configuration
+MONITORING_CONFIG = {
+    "enabled": os.getenv("MONITORING_ENABLED", "true").lower() == "true",
+    "metrics_endpoint": "/metrics/",
+    "health_endpoint": "/health/"
+}
+
+# Cache configuration
+CACHE_CONFIG = {
+    "enabled": os.getenv("LLM_CACHE_ENABLED", "true").lower() == "true",
+    "ttl_seconds": int(os.getenv("LLM_CACHE_TTL", "3600")),  # 1 hour
+    "max_size": int(os.getenv("LLM_CACHE_MAX_SIZE", "1000"))
+}
+
 
 def get_azure_config() -> Dict[str, Any]:
     """Get Azure OpenAI configuration"""
@@ -206,6 +220,8 @@ __all__ = [
     'TEST_CONFIG',
     'TEMPLATE_CONFIG',
     'PLUGIN_CONFIG',
+    'MONITORING_CONFIG',
+    'CACHE_CONFIG',
     'AppConfig',
     'get_azure_config',
     'get_cors_origins',

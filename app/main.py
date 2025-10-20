@@ -267,3 +267,56 @@ async def get_plugin_info(plugin_id: str):
         }
     }
 
+
+@app.get("/health/")
+async def health_check():
+    """
+    Health check endpoint for monitoring and load balancers.
+
+    Returns basic health status and system information.
+    """
+    from datetime import datetime
+    from .core.monitoring import get_system_metrics
+
+    try:
+        # Check if framework is initialized
+        framework_healthy = framework is not None
+
+        # Get system metrics
+        system_metrics = get_system_metrics()
+
+        return {
+            "status": "healthy" if framework_healthy else "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+            "components": {
+                "framework": "healthy" if framework_healthy else "unavailable",
+                "system": "healthy" if system_metrics.get("cpu_percent", 100) < 90 else "degraded"
+            },
+            "system": system_metrics
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }
+
+
+@app.get("/metrics/")
+async def get_metrics():
+    """
+    Performance metrics endpoint.
+
+    Returns application and system metrics for monitoring.
+    """
+    from datetime import datetime
+    from .core.monitoring import get_monitor, get_system_metrics
+
+    monitor = get_monitor()
+
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "application": monitor.get_metrics(),
+        "system": get_system_metrics()
+    }
+
