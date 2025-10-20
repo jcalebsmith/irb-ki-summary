@@ -19,7 +19,9 @@ try:
             developer_name = config.get('developer_name', 'the developer')
     else:
         developer_name = 'the developer'
-except:
+except Exception as e:
+    # Fall back to default if config cannot be read
+    print(f"Warning: Could not read developer name from config: {e}", file=sys.stderr)
     developer_name = 'the developer'
 
 # Initialize context
@@ -46,7 +48,8 @@ try:
         if not shutil.which('daic'):
             needs_setup = True
             quick_checks.append("daic command")
-except:
+except Exception as e:
+    print(f"Warning: Could not check for daic command: {e}", file=sys.stderr)
     needs_setup = True
     quick_checks.append("daic command")
 

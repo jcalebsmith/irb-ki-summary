@@ -134,9 +134,3 @@ class PDFProcessingError(DocumentFrameworkError):
         self.page = page
 
 
-class RAGPipelineError(DocumentFrameworkError):
-    """Raised when RAG pipeline operations fail."""
-    
-    def __init__(self, operation: str, message: str, details: Optional[dict[str, Any]] = None):
-        super().__init__(f"RAG pipeline {operation} failed: {message}", details)
-        self.operation = operation

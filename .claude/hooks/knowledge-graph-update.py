@@ -166,8 +166,9 @@ def main():
     # Get tool input from stdin
     try:
         tool_input = json.loads(sys.stdin.read())
-    except:
-        sys.exit(0)  # Silently exit if no input
+    except (json.JSONDecodeError, ValueError) as e:
+        # Silently exit if no valid JSON input
+        sys.exit(0)
     
     tool_name = tool_input.get("tool", "")
     params = tool_input.get("params", {})

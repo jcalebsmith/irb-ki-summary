@@ -12,6 +12,7 @@ from .core.document_framework import DocumentGenerationFramework
 from .core.exceptions import DocumentFrameworkError, PDFProcessingError
 from .core.document_models import Document
 from .core.section_parser import parse_ki_sections
+from .config import get_cors_origins
 
 
 def convert_section(text):
@@ -24,9 +25,10 @@ def convert_section(text):
 
 app = FastAPI()
 
+# Configure CORS from environment variables
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Restricted to specific origins for security
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

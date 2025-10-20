@@ -28,7 +28,8 @@ try:
             config = json.load(f)
     else:
         config = {}
-except:
+except (json.JSONDecodeError, IOError) as e:
+    # Fall back to empty config if cannot be read
     config = {}
 
 # Default trigger phrases if not configured

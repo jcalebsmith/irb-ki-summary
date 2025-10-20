@@ -140,7 +140,8 @@ async def list_plugins():
                     "name": info.get("name", plugin_id),
                     "description": info.get("description", "")
                 })
-            except:
+            except Exception as e:
+                logger.warning(f"Failed to get info for plugin {plugin_id}: {e}")
                 plugin_info.append({
                     "id": plugin_id,
                     "name": plugin_id,

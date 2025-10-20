@@ -1,6 +1,6 @@
 """
 Document Generation Framework
-Main orchestrator that combines plugin architecture, Jinja2 templates, and RAG pipeline
+Main orchestrator that combines plugin architecture and Jinja2 templates
 """
 from typing import Dict, Any, List, Optional, Tuple, Union
 from pathlib import Path
@@ -21,8 +21,7 @@ from .exceptions import (
     DocumentFrameworkError,
     PluginNotFoundError,
     TemplateError,
-    ValidationError,
-    RAGPipelineError
+    ValidationError
 )
 from .types import (
     ValidationResult, ValidationConstants, ProcessingConstants,
@@ -76,25 +75,22 @@ class DocumentGenerationFramework:
     Main framework for document generation with plugin architecture
     """
     
-    def __init__(self, 
+    def __init__(self,
                  plugin_dir: str = "app/plugins",
                  template_dir: str = "app/templates",
-                 embed_model: Any = None,
                  llm: Any = None):
         """
         Initialize document generation framework
-        
+
         Args:
             plugin_dir: Directory containing document plugins
             template_dir: Directory containing Jinja2 templates
-            embed_model: Embedding model for RAG pipeline
             llm: Language model for generation
         """
         self.plugin_manager = PluginManager(plugin_dir)
         self.template_engine = SimpleTemplateRenderer(template_dir)
-        # RAG pipeline removed - was never actually used for retrieval
         self.validation_orchestrator = ValidationOrchestrator()
-        self.agent_pool = SimpleDocumentProcessor(llm_client=llm)  # Pass LLM to document processor
+        self.agent_pool = SimpleDocumentProcessor(llm_client=llm)
     
     def get_global_parameters(self) -> Dict[str, Any]:
         """Get global parameters for template rendering"""
@@ -181,12 +177,11 @@ class DocumentGenerationFramework:
         """Select the appropriate plugin for the document type."""
         return self.plugin_manager.get_plugin(document_type)
     
-    async def _build_context(self, parameters: Dict[str, Any], 
+    async def _build_context(self, parameters: Dict[str, Any],
                             document: Optional[Document]) -> Dict[str, Any]:
         """Build context from parameters and optional document.
-        
-        If a document is provided, it will be processed using the RAG pipeline
-        to extract relevant information.
+
+        If a document is provided, it will be processed by extraction agents.
         """
         context = parameters.copy()
         
@@ -297,9 +292,9 @@ class DocumentGenerationFramework:
         )
         
         # Debug logging
-        print(f"DEBUG: Validation result - passed: {result.get('passed', 'N/A')}")
+        logger.debug(f"Validation result - passed: {result.get('passed', 'N/A')}")
         if result.get('issues'):
-            print(f"DEBUG: Validation issues: {result['issues'][:3]}")
+            logger.debug(f"Validation issues: {result['issues'][:3]}")
         
         return result
     
